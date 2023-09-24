@@ -15,3 +15,26 @@ if (!function_exists('basePath')) {
         return app()->rootPath . $path;
     }
 }
+
+if (!function_exists('env')) {
+    function env(string $key, string $default = ''): mixed
+    {
+        return $_ENV[$key] ?? $default;
+    }
+}
+
+if (!function_exists('redirect')) {
+    function redirect(string $path): never
+    {
+        header("Location: $path");
+
+        exit;
+    }
+}
+
+if (!function_exists('view')) {
+    function view(string $path, array $params = []): string
+    {
+        return app()->view->render($path, $params);
+    }
+}
