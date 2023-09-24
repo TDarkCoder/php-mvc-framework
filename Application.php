@@ -2,6 +2,7 @@
 
 namespace TDarkCoder\Framework;
 
+use TDarkCoder\Framework\Enums\SessionKeys;
 use Exception;
 
 class Application
@@ -11,6 +12,7 @@ class Application
     public readonly Request $request;
     public readonly Router $router;
     public readonly Session $session;
+    public ?Model $user = null;
     public readonly View $view;
 
     public function __construct(public readonly string $rootPath, public readonly array $config)
@@ -18,6 +20,7 @@ class Application
         self::$app = $this;
 
         $this->initializeComponents();
+        $this->initializeUser();
     }
 
     private function initializeComponents(): void
@@ -28,6 +31,26 @@ class Application
         $this->router = new Router($this->request);
         $this->view = new View();
     }
+
+    private function initializeUser(): void
+    {
+        if (!$user = config('user')) {
+            return;
+        }
+
+        $user = new $user();
+
+        if (!$user instanceof Model || !$token = $this->session->get(SessionKeys::Token->value)) {
+            return;
+        }
+
+        $this->user = $user->authorizeWithToken($token);
+
+        if (!$this->user) {
+            $this->session->unset(SessionKeys::Token->value);
+        }
+    }
+
     public function run(): never
     {
         try {
