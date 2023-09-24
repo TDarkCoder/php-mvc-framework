@@ -1,0 +1,23 @@
+{
+    "name": "php-mvc/framework",
+    "description": "The PHP MVC Framework",
+    "autoload": {
+        "files": [
+            "core/helpers.php"
+        ],
+        "psr-4": {
+            "TDarkCoder\\Framework\\": "."
+        }
+    },
+    "authors": [
+        {
+            "name": "Azizbek Khalilov",
+            "email": "azizbekkhalilov151@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "ext-pdo": "*",
+        "vlucas/phpdotenv": "^5.5"
+    }
+}
