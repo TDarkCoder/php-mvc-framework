@@ -16,6 +16,24 @@ if (!function_exists('basePath')) {
     }
 }
 
+if (!function_exists('config')) {
+    function config(string $key)
+    {
+        $config = app()->config;
+        $keys = explode('.', $key);
+
+        foreach ($keys as $key) {
+            $config = $config[$key] ?? null;
+
+            if (is_null($config)) {
+                return null;
+            }
+        }
+
+        return $config;
+    }
+}
+
 if (!function_exists('env')) {
     function env(string $key, string $default = ''): mixed
     {
