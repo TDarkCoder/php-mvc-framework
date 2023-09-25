@@ -3,7 +3,7 @@
     "description": "The PHP MVC Framework",
     "autoload": {
         "files": [
-            "core/helpers.php"
+            "helpers.php"
         ],
         "psr-4": {
             "TDarkCoder\\Framework\\": "."
