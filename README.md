@@ -1,7 +1,9 @@
 # About this PHP MVC framework
 > **Note:** This repository contains the core code of the PHP MVC framework. If you want to build an application using it, visit the main [PHP MVC Application repository](https://github.com/TDarkCoder/php-mvc-application).
+
 This Framework is a simple and educational PHP MVC (Model-View-Controller) framework designed for learning purposes. It provides a basic structure for building web applications using the MVC architectural pattern. While this framework may not be production-ready, it serves as a valuable educational resource for understanding the fundamentals of MVC and web development in PHP.
-> If you want to contribute, feel free to do so 
+
+> If you want to contribute, feel free to do so.
 
 ## Features
 
