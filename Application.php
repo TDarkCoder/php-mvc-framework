@@ -4,6 +4,7 @@ namespace TDarkCoder\Framework;
 
 use TDarkCoder\Framework\Enums\SessionKeys;
 use Exception;
+use TDarkCoder\Framework\Services\AccessToken\AuthorizeTokens;
 
 class Application
 {
@@ -19,8 +20,14 @@ class Application
     {
         self::$app = $this;
 
-        $this->initializeComponents();
-        $this->initializeUser();
+        try {
+            $this->initializeComponents();
+            $this->initializeUser();
+        } catch (Exception $exception) {
+            echo $this->renderError($exception);
+
+            exit(1);
+        }
     }
 
     private function initializeComponents(): void
@@ -40,7 +47,9 @@ class Application
 
         $user = new $user();
 
-        if (!$user instanceof Model || !$token = $this->session->get(SessionKeys::Token->value)) {
+        if (!$user instanceof Model
+            || !class_uses($user, AuthorizeTokens::class)
+            || !$token = $this->session->get(SessionKeys::Token->value)) {
             return;
         }
 
@@ -61,6 +70,6 @@ class Application
             ]);
         }
 
-        exit;
+        return $this->view->render($file, compact('exception'));
     }
 }
