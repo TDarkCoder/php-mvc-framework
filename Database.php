@@ -2,21 +2,25 @@
 
 namespace TDarkCoder\Framework;
 
+use Exception;
 use PDO;
-use PDOException;
+use TDarkCoder\Framework\Exceptions\ServerErrorException;
 
 class Database
 {
     private PDO $pdo;
 
+    /**
+     * @throws Exception
+     */
     public function __construct()
     {
         try {
             $this->pdo = new PDO(config('database.dsn'), config('database.username'), config('database.password'));
 
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        } catch (PDOException $exception) {
-            die('Database connection failed:' . $exception->getMessage());
+        } catch (Exception) {
+            throw new ServerErrorException();
         }
     }
 
@@ -47,8 +51,10 @@ class Database
         $statement = $this->pdo->prepare("SHOW TABLES");
         $statement->execute();
 
-        foreach ($statement->fetchAll() as $table) {
-            $this->pdo->exec("DROP TABLE $table[0]");
+        foreach ($statement->fetchAll() ?? [] as $table) {
+            $this->pdo->exec("DROP TABLE IF EXISTS $table[0]");
+
+            $this->log("Deleted table: $table[0]");
         }
 
         $this->runMigrations();
@@ -110,6 +116,6 @@ class Database
 
     private function log(string $message): void
     {
-        echo '[' . date('Y-m-d H:i:s') . '] - ' . $message . PHP_EOL;
+        echo sprintf('[%s] - %s' . PHP_EOL, date('Y-m-d H:i:s'), $message);
     }
 }

@@ -65,9 +65,30 @@ class Application
         try {
             echo $this->router->resolve();
         } catch (Exception $exception) {
-            echo $this->view->render('_errors', [
-                'exception' => $exception,
-            ]);
+            echo $this->renderError($exception);
+        }
+
+        exit(1);
+    }
+
+    private function renderError(Exception $exception): string
+    {
+        $file = null;
+
+        if (file_exists(basePath("/views/_errors/{$exception->getCode()}.php"))) {
+            $file = "_errors/{$exception->getCode()}";
+        }
+
+        if (is_null($file) && file_exists(basePath('/views/_errors.php'))) {
+            $file = '_errors';
+        }
+
+        if (is_null($file)) {
+            ob_start();
+
+            include_once __DIR__ . '/Views/_errors.php';
+
+            return ob_get_clean();
         }
 
         return $this->view->render($file, compact('exception'));
