@@ -6,8 +6,8 @@ use TDarkCoder\Framework\Enums\Rules;
 
 class Request
 {
-    protected array $data = [];
-    protected array $errors = [];
+    private array $data = [];
+    private array $errors = [];
 
     public function __construct()
     {
@@ -24,20 +24,24 @@ class Request
         }
     }
 
-    public function only(array $keys): array
+    public function __get(string $name): mixed
     {
-        $results = [];
+        return $this->data[$name] ?? null;
+    }
 
-        foreach ($keys as $key) {
-            $results[$key] = $this->data[$key] ?? null;
-        }
-
-        return $results;
+    public function __set(string $name, mixed $value): void
+    {
+        $this->data[$name] = $value;
     }
 
     public function all(): array
     {
         return $this->data;
+    }
+
+    public function getError(string $attribute): string|bool
+    {
+        return $this->errors[$attribute][0] ?? false;
     }
 
     public function isGet(): bool
@@ -55,6 +59,29 @@ class Request
         return strtolower($this->data['_method'] ?? $_SERVER['REQUEST_METHOD'] ?? '');
     }
 
+    public function only(array $keys): array
+    {
+        $results = [];
+
+        foreach ($keys as $key) {
+            $results[$key] = $this->data[$key] ?? null;
+        }
+
+        return $results;
+    }
+
+    public function path(): string
+    {
+        $path = $_SERVER['REQUEST_URI'];
+        $queryPosition = strpos($path, '?');
+
+        if (!$queryPosition) {
+            return $path;
+        }
+
+        return substr($path, 0, $queryPosition);
+    }
+
     public function validate(array $data): bool
     {
         foreach ($data as $attribute => $rules) {
@@ -66,30 +93,30 @@ class Request
                 $newRules = explode(':', $rule);
 
                 if (count($newRules) > 1) {
-                    [$rule, $action] = $newRules;
+                    [$rule, $indicator] = $newRules;
 
-                    if ($rule === Rules::Min->value && strlen($value) < $action) {
-                        $this->addError($attribute, Rules::Min, $action);
+                    if ($rule === Rules::Min->value && strlen($value) < $indicator) {
+                        $this->addError($attribute, Rules::Min, $indicator);
                     }
 
-                    if ($rule === Rules::Max->value && strlen($value) > $action) {
-                        $this->addError($attribute, Rules::Min, $action);
+                    if ($rule === Rules::Max->value && strlen($value) > $indicator) {
+                        $this->addError($attribute, Rules::Min, $indicator);
                     }
 
-                    if ($rule === Rules::LessOrEqual->value && $value > $action) {
-                        $this->addError($attribute, Rules::LessOrEqual, $action);
+                    if ($rule === Rules::LessOrEqual->value && $value > $indicator) {
+                        $this->addError($attribute, Rules::LessOrEqual, $indicator);
                     }
 
-                    if ($rule === Rules::GreaterOrEqual->value && $value < $action) {
-                        $this->addError($attribute, Rules::GreaterOrEqual, $action);
+                    if ($rule === Rules::GreaterOrEqual->value && $value < $indicator) {
+                        $this->addError($attribute, Rules::GreaterOrEqual, $indicator);
                     }
 
-                    if ($rule === Rules::Match->value && $value !== $this->{$action}) {
-                        $this->addError($attribute, Rules::Match, $action);
+                    if ($rule === Rules::Match->value && $value !== $this->{$indicator}) {
+                        $this->addError($attribute, Rules::Match, $indicator);
                     }
 
                     if ($rule === Rules::Unique->value) {
-                        $object = new $action();
+                        $object = new $indicator();
 
                         if ($object instanceof Model && $object->findOne([$attribute => $value])) {
                             $this->addError($attribute, Rules::Unique, $attribute);
@@ -114,35 +141,8 @@ class Request
         return empty($this->errors);
     }
 
-    public function getError(string $attribute): string
+    private function addError(string $attribute, Rules $rule, string $indicator = ''): void
     {
-        return $this->errors[$attribute][0] ?? false;
-    }
-
-    private function addError(string $attribute, Rules $rule, string $action = ''): void
-    {
-        $this->errors[$attribute][] = str_replace("{{$rule->value}}", $action, $rule->message()) ?? 'Unknown error';
-    }
-
-    public function path(): string
-    {
-        $path = $_SERVER['REQUEST_URI'];
-        $queryPosition = strpos($path, '?');
-
-        if (!$queryPosition) {
-            return $path;
-        }
-
-        return substr($path, 0, $queryPosition);
-    }
-
-    public function __set(string $name, mixed $value)
-    {
-        $this->data[$name] = $value;
-    }
-
-    public function __get(string $name): mixed
-    {
-        return $this->data[$name] ?? null;
+        $this->errors[$attribute][] = str_replace("{{$rule->value}}", $indicator, $rule->message()) ?? 'Unknown error';
     }
 }
