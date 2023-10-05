@@ -39,29 +39,6 @@ class View
         return $view;
     }
 
-    public function renderError(Exception $exception): string
-    {
-        $file = null;
-
-        if (file_exists(basePath("/views/_errors/{$exception->getCode()}.php"))) {
-            $file = "_errors/{$exception->getCode()}";
-        }
-
-        if (is_null($file) && file_exists(basePath('/views/_errors.php'))) {
-            $file = '_errors';
-        }
-
-        if (is_null($file)) {
-            ob_start();
-
-            include_once __DIR__ . '/Views/_errors.php';
-
-            return ob_get_clean();
-        }
-
-        return $this->render($file, compact('exception'));
-    }
-
     private function renderLayout(): bool|string
     {
         ob_start();

@@ -24,7 +24,7 @@ class Application
             $this->initializeComponents();
             $this->initializeUser();
         } catch (Exception $exception) {
-            echo $this->view->renderError($exception);
+            echo $this->renderError($exception);
 
             exit(1);
         }
@@ -35,7 +35,7 @@ class Application
         try {
             echo $this->router->resolve();
         } catch (Exception $exception) {
-            echo $this->view->renderError($exception);
+            echo $this->renderError($exception);
         }
 
         exit(1);
@@ -69,5 +69,28 @@ class Application
         if (!$this->user) {
             $this->session->unset(SessionKeys::Token->value);
         }
+    }
+
+    private function renderError(Exception $exception): string
+    {
+        $file = null;
+
+        if (file_exists(basePath("/views/_errors/{$exception->getCode()}.php"))) {
+            $file = "_errors/{$exception->getCode()}";
+        }
+
+        if (is_null($file) && file_exists(basePath('/views/_errors.php'))) {
+            $file = '_errors';
+        }
+
+        if (!isset($this->view) || is_null($file)) {
+            ob_start();
+
+            include_once __DIR__ . '/Views/_errors.php';
+
+            return ob_get_clean();
+        }
+
+        return $this->view->render($file, compact('exception'));
     }
 }
