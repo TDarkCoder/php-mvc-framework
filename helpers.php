@@ -1,6 +1,8 @@
 <?php
 
 use TDarkCoder\Framework\Application;
+use TDarkCoder\Framework\Request;
+use TDarkCoder\Framework\Session;
 
 if (!function_exists('app')) {
     function app(): Application
@@ -17,7 +19,7 @@ if (!function_exists('basePath')) {
 }
 
 if (!function_exists('config')) {
-    function config(string $key)
+    function config(string $key): mixed
     {
         $config = app()->config;
         $keys = explode('.', $key);
@@ -46,7 +48,21 @@ if (!function_exists('redirect')) {
     {
         header("Location: $path");
 
-        exit;
+        exit(1);
+    }
+}
+
+if (!function_exists('request')) {
+    function request(): Request
+    {
+        return app()->request;
+    }
+}
+
+if (!function_exists('session')) {
+    function session(): Session
+    {
+        return app()->session;
     }
 }
 
