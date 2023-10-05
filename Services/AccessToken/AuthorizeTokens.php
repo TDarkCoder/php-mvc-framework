@@ -8,13 +8,6 @@ use TDarkCoder\Framework\Model;
 
 trait AuthorizeTokens
 {
-    public function authorizeWithToken(string $token): ?Model
-    {
-        $token = AccessToken::findOne(['token' => $token]);
-
-        return static::findOne([$this->primaryKey => $token->user_id]);
-    }
-
     /**
      * @throws Exception
      */
@@ -26,14 +19,21 @@ trait AuthorizeTokens
             'device' => $_SERVER['HTTP_USER_AGENT'],
         ]);
 
-        app()->session->set(SessionKeys::Token->value, $token->token);
+        session()->set(SessionKeys::Token->value, $token->token);
+    }
+
+    public function authorizeWithToken(string $token): ?Model
+    {
+        $token = AccessToken::findOne(['token' => $token]);
+
+        return static::findOne([$this->primaryKey => $token->user_id]);
     }
 
     public function logout(): void
     {
-        $token = AccessToken::findOne(['token' => app()->session->get(SessionKeys::Token->value)]);
+        $token = AccessToken::findOne(['token' => session()->get(SessionKeys::Token->value)]);
         $token?->delete();
 
-        app()->session->unset(SessionKeys::Token->value);
+        session()->unset(SessionKeys::Token->value);
     }
 }
