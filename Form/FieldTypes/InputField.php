@@ -16,10 +16,10 @@ class InputField extends Field
                    value="%s">
         ',
             $this->type,
-            app()->request->getError($this->attribute) ? 'is-invalid' : '',
+            request()->getError($this->attribute) ? 'is-invalid' : '',
             $this->attribute,
             $this->attribute,
-            app()->request->{$this->attribute} ?? $this->defaultValue,
+            request()->{$this->attribute} ?? $this->defaultValue,
         );
     }
 }

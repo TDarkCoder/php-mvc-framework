@@ -7,7 +7,7 @@ use TDarkCoder\Framework\Enums\InputTypes;
 abstract class Field
 {
     protected string $type;
-    protected ?string $defaultValue = '';
+    protected string $defaultValue = '';
 
     protected abstract function renderField(): string;
 
@@ -29,8 +29,15 @@ abstract class Field
             $this->type === InputTypes::Hidden->value ? 'd-none' : '',
             $this->label ?? ucfirst($this->attribute),
             $this->renderField(),
-            app()->request->getError($this->attribute),
+            request()->getError($this->attribute),
         );
+    }
+
+    public function default(string $value): static
+    {
+        $this->defaultValue = $value;
+
+        return $this;
     }
 
     public function email(): static
@@ -57,13 +64,6 @@ abstract class Field
     public function password(): static
     {
         $this->type = InputTypes::Password->value;
-
-        return $this;
-    }
-
-    public function default(?string $value): static
-    {
-        $this->defaultValue = $value;
 
         return $this;
     }
