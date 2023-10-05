@@ -87,6 +87,14 @@ class Database
         }
     }
 
+    private function appliedMigrations(): array
+    {
+        $statement = $this->pdo->prepare("SELECT `migration` from `migrations`");
+        $statement->execute();
+
+        return $statement->fetchAll(PDO::FETCH_COLUMN) ?? [];
+    }
+
     private function createMigrationsTable(): void
     {
         $this->pdo->exec("
@@ -98,12 +106,9 @@ class Database
         ");
     }
 
-    private function appliedMigrations(): array
+    private function log(string $message): void
     {
-        $statement = $this->pdo->prepare("SELECT `migration` from `migrations`");
-        $statement->execute();
-
-        return $statement->fetchAll(PDO::FETCH_COLUMN) ?? [];
+        echo sprintf('[%s] - %s' . PHP_EOL, date('Y-m-d H:i:s'), $message);
     }
 
     private function saveMigrations(array $migrations): void
@@ -112,10 +117,5 @@ class Database
 
         $statement = $this->pdo->prepare("INSERT INTO `migrations` (`migration`) VALUES $migrations");
         $statement->execute();
-    }
-
-    private function log(string $message): void
-    {
-        echo sprintf('[%s] - %s' . PHP_EOL, date('Y-m-d H:i:s'), $message);
     }
 }

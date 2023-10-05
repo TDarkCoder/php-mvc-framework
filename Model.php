@@ -15,19 +15,52 @@ abstract class Model
 
     abstract public function table(): string;
 
+    public function __get(string $key): mixed
+    {
+        return $this->data[$key] ?? null;
+    }
+
+    public function __set(string $key, mixed $value): void
+    {
+        $this->data[$key] = $value;
+    }
+
     public static function all(): array
     {
-        $model = (new static());
+        $model = new static();
 
-        $statement = $model->prepare("SELECT * FROM " . $model->table());
+        $statement = $model->prepare("SELECT * FROM {$model->table()}");
         $statement->execute();
 
         return $statement->fetchAll() ?: [];
     }
 
+    /**
+     * @throws ServerErrorException
+     */
+    public static function create(array $data): static
+    {
+        $model = (new static());
+
+        foreach ($data as $key => $value) {
+            $model->{$key} = $value;
+        }
+
+        return $model->save();
+    }
+
+    public function delete(): bool
+    {
+        $statement = $this->prepare("DELETE FROM {$this->table()} WHERE {$this->primaryKey} = :primaryKey");
+        $statement->bindValue(":primaryKey", $this->{$this->primaryKey});
+
+        return $statement->execute();
+    }
+
     public static function findOne(array $params): ?static
     {
-        $statement = (new static())->handleWhere($params);
+        $model = new static();
+        $statement = $model->handleWhere($params);
 
         return $statement->fetchObject(static::class) ?: null;
     }
@@ -48,42 +81,10 @@ abstract class Model
 
     public static function findAll(array $params): array
     {
-        $statement = (new static())->handleWhere($params);
+        $model = new static();
+        $statement = $model->handleWhere($params);
 
         return $statement->fetchAll() ?: [];
-    }
-
-    private function handleWhere(array $params): bool|PDOStatement
-    {
-        $where = [];
-
-        foreach ($params as $key => $value) {
-            $where[] = "`$key` = :$key";
-        }
-
-        $statement = $this->prepare("SELECT * FROM " . $this->table() . " WHERE " . implode('AND', $where));
-
-        foreach ($params as $key => $value) {
-            $statement->bindValue(":$key", $value);
-        }
-
-        $statement->execute();
-
-        return $statement;
-    }
-
-    /**
-     * @throws ServerErrorException
-     */
-    public static function create(array $data): static
-    {
-        $model = (new static());
-
-        foreach ($data as $key => $value) {
-            $model->{$key} = $value;
-        }
-
-        return $model->save();
     }
 
     /**
@@ -133,26 +134,27 @@ abstract class Model
         return $statement->execute();
     }
 
-    public function delete(): bool
+    private function handleWhere(array $params): bool|PDOStatement
     {
-        $statement = $this->prepare("DELETE FROM {$this->table()} WHERE {$this->primaryKey} = :primaryKey");
-        $statement->bindValue(":primaryKey", $this->{$this->primaryKey});
+        $where = [];
 
-        return $statement->execute();
+        foreach ($params as $key => $value) {
+            $where[] = "`$key` = :$key";
+        }
+
+        $statement = $this->prepare("SELECT * FROM " . $this->table() . " WHERE " . implode('AND', $where));
+
+        foreach ($params as $key => $value) {
+            $statement->bindValue(":$key", $value);
+        }
+
+        $statement->execute();
+
+        return $statement;
     }
 
     private function prepare(string $query): PDOStatement|false
     {
         return app()->database->pdo()->prepare($query);
-    }
-
-    public function __set(string $key, mixed $value): void
-    {
-        $this->data[$key] = $value;
-    }
-
-    public function __get(string $key): mixed
-    {
-        return $this->data[$key] ?? null;
     }
 }
