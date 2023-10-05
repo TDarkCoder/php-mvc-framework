@@ -13,24 +13,25 @@ class Session
         session_start();
 
         $this->flash = SessionKeys::Flash->value;
+        $this->initializeFlashMessages();
+    }
 
-        foreach ($_SESSION[$this->flash] ?? [] as $key => $session) {
-            $_SESSION[$this->flash][$key] = [
-                'remove' => true,
-                'value' => $session['value'],
-            ];
-        }
+    public function __destruct()
+    {
+        $this->removeFlashMessages();
     }
 
     public function set(string $key, mixed $value, bool $isFlash = false): void
     {
-        if (!$isFlash) {
-            $_SESSION[$key] = $value;
-        } else {
+        if ($isFlash) {
             $_SESSION[$this->flash][$key] = [
                 'remove' => false,
                 'value' => $value,
             ];
+        }
+
+        if (!$isFlash && $key !== $this->flash) {
+            $_SESSION[$key] = $value;
         }
     }
 
@@ -44,7 +45,17 @@ class Session
         unset($_SESSION[$key]);
     }
 
-    public function __destruct()
+    private function initializeFlashMessages(): void
+    {
+        foreach ($_SESSION[$this->flash] ?? [] as $key => $session) {
+            $_SESSION[$this->flash][$key] = [
+                'remove' => true,
+                'value' => $session['value'],
+            ];
+        }
+    }
+
+    private function removeFlashMessages(): void
     {
         foreach ($_SESSION[$this->flash] ?? [] as $key => $value) {
             if ($value['remove'] === true) {
