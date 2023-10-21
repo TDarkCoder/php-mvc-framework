@@ -2,19 +2,27 @@
 
 namespace TDarkCoder\Framework;
 
-use TDarkCoder\Framework\Enums\SessionKeys;
 use Exception;
+use TDarkCoder\Framework\Database\Database;
+use TDarkCoder\Framework\Database\Model;
+use TDarkCoder\Framework\Enums\SessionKeys;
+use TDarkCoder\Framework\Http\Request;
+use TDarkCoder\Framework\Routing\Router;
+use TDarkCoder\Framework\Routing\RouterContract;
 use TDarkCoder\Framework\Services\AccessToken\AuthorizeTokens;
+use TDarkCoder\Framework\Session\Session;
+use TDarkCoder\Framework\Views\View;
+use TDarkCoder\Framework\Views\ViewContract;
 
 class Application
 {
     public static self $app;
     public readonly Database $database;
     public readonly Request $request;
-    public readonly Router $router;
+    public readonly RouterContract $router;
     public readonly Session $session;
     public ?Model $user = null;
-    public readonly View $view;
+    public readonly ViewContract $view;
 
     public function __construct(public readonly string $rootPath, public readonly array $config)
     {
@@ -60,14 +68,14 @@ class Application
 
         if (!$user instanceof Model
             || !class_uses($user, AuthorizeTokens::class)
-            || !$token = $this->session->get(SessionKeys::Token->value)) {
+            || !$this->session->has(SessionKeys::Token->value)) {
             return;
         }
 
-        $this->user = $user->authorizeWithToken($token);
+        $this->user = $user->authorizeWithToken($this->session->get(SessionKeys::Token->value));
 
         if (!$this->user) {
-            $this->session->unset(SessionKeys::Token->value);
+            $this->session->remove(SessionKeys::Token->value);
         }
     }
 

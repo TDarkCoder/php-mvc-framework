@@ -1,10 +1,10 @@
 <?php
 
-namespace TDarkCoder\Framework;
+namespace TDarkCoder\Framework\Session;
 
 use TDarkCoder\Framework\Enums\SessionKeys;
 
-class Session
+class Session implements SessionContract
 {
     private string $flash;
 
@@ -21,28 +21,47 @@ class Session
         $this->removeFlashMessages();
     }
 
-    public function set(string $key, mixed $value, bool $isFlash = false): void
+    public function set(string $key, mixed $value): void
     {
-        if ($isFlash) {
-            $_SESSION[$this->flash][$key] = [
-                'remove' => false,
-                'value' => $value,
-            ];
-        }
-
-        if (!$isFlash && $key !== $this->flash) {
-            $_SESSION[$key] = $value;
-        }
+        $_SESSION[$key] = $value;
     }
 
     public function get(string $key): mixed
     {
-        return $_SESSION[$this->flash][$key]['value'] ?? $_SESSION[$key] ?? null;
+        return $_SESSION[$key] ?? null;
     }
 
-    public function unset(string $key): void
+    public function has(string $key): bool
+    {
+        return isset($_SESSION[$key]);
+    }
+
+    public function remove(string $key): void
     {
         unset($_SESSION[$key]);
+    }
+
+    public function setFlash(string $key, mixed $value): void
+    {
+        $_SESSION[$this->flash][$key] = [
+            'remove' => false,
+            'value' => $value,
+        ];
+    }
+
+    public function getFlash(string $key): mixed
+    {
+        return $_SESSION[$this->flash][$key]['value'] ?? null;
+    }
+
+    public function hasFlash(string $key): bool
+    {
+        return isset($_SESSION[$this->flash][$key]);
+    }
+
+    public function removeFlash(string $key): void
+    {
+        unset($_SESSION[$this->flash][$key]);
     }
 
     private function initializeFlashMessages(): void

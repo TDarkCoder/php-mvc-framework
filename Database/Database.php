@@ -1,6 +1,6 @@
 <?php
 
-namespace TDarkCoder\Framework;
+namespace TDarkCoder\Framework\Database;
 
 use Exception;
 use PDO;

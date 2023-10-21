@@ -1,30 +1,11 @@
 <?php
 
-namespace TDarkCoder\Framework;
+namespace TDarkCoder\Framework\Views;
 
-use Exception;
-
-class View
+class View implements ViewContract
 {
-    public const DEFAULT_TITLE = 'Home';
-
     private string $title = self::DEFAULT_TITLE;
     private string $layout = '';
-
-    public function getTitle(): string
-    {
-        return $this->title;
-    }
-
-    public function setLayout(string $layout): void
-    {
-        $this->layout = $layout;
-    }
-
-    public function setTitle(string $title): void
-    {
-        $this->title = $title;
-    }
 
     public function render(string $view, array $params): string
     {

@@ -1,6 +1,6 @@
 <?php
 
-namespace TDarkCoder\Framework;
+namespace TDarkCoder\Framework\Http;
 
 class Controller
 {

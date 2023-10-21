@@ -1,7 +1,8 @@
 <?php
 
-namespace TDarkCoder\Framework;
+namespace TDarkCoder\Framework\Http;
 
+use TDarkCoder\Framework\Database\Model;
 use TDarkCoder\Framework\Enums\Rules;
 
 class Request

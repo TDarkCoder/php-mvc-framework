@@ -1,6 +1,6 @@
 <?php
 
-namespace TDarkCoder\Framework;
+namespace TDarkCoder\Framework\Database;
 
 use TDarkCoder\Framework\Exceptions\NotFoundException;
 use TDarkCoder\Framework\Exceptions\ServerErrorException;

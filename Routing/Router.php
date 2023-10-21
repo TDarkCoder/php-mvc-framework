@@ -1,14 +1,16 @@
 <?php
 
-namespace TDarkCoder\Framework;
+namespace TDarkCoder\Framework\Routing;
 
 use Closure;
 use Exception;
-use TDarkCoder\Framework\Exceptions\NotFoundException;
 use ReflectionClass;
 use ReflectionParameter;
+use TDarkCoder\Framework\Exceptions\NotFoundException;
+use TDarkCoder\Framework\Http\Controller;
+use TDarkCoder\Framework\Http\Middleware;
 
-class Router
+class Router implements RouterContract
 {
     private array $currentRoute;
     private array $routes = [];

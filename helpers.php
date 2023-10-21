@@ -1,8 +1,8 @@
 <?php
 
 use TDarkCoder\Framework\Application;
-use TDarkCoder\Framework\Request;
-use TDarkCoder\Framework\Session;
+use TDarkCoder\Framework\Http\Request;
+use TDarkCoder\Framework\Session\Session;
 
 if (!function_exists('app')) {
     function app(): Application

@@ -2,7 +2,8 @@
 
 namespace TDarkCoder\Framework\Services\AccessToken;
 
-use TDarkCoder\Framework\Model;
+
+use TDarkCoder\Framework\Database\Model;
 
 class AccessToken extends Model
 {

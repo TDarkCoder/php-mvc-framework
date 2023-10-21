@@ -3,8 +3,8 @@
 namespace TDarkCoder\Framework\Services\AccessToken;
 
 use Exception;
+use TDarkCoder\Framework\Database\Model;
 use TDarkCoder\Framework\Enums\SessionKeys;
-use TDarkCoder\Framework\Model;
 
 trait AuthorizeTokens
 {
