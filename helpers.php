@@ -36,6 +36,15 @@ if (!function_exists('config')) {
     }
 }
 
+if (!function_exists('dd')) {
+    function dd(mixed $data): never
+    {
+        var_dump($data);
+
+        exit(1);
+    }
+}
+
 if (!function_exists('env')) {
     function env(string $key, string $default = ''): mixed
     {

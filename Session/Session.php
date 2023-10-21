@@ -2,18 +2,26 @@
 
 namespace TDarkCoder\Framework\Session;
 
+use Exception;
 use TDarkCoder\Framework\Enums\SessionKeys;
 
 class Session implements SessionContract
 {
     private string $flash;
 
+    /**
+     * @throws Exception
+     */
     public function __construct()
     {
         session_start();
 
         $this->flash = SessionKeys::Flash->value;
         $this->initializeFlashMessages();
+
+        if (!isset($_SESSION[SessionKeys::Token->value])) {
+            $_SESSION[SessionKeys::Token->value] = bin2hex(random_bytes(32));
+        }
     }
 
     public function __destruct()

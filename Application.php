@@ -66,17 +66,15 @@ class Application
 
         $user = new $user();
 
-        if (!$user instanceof Model
+        if (
+            !$user instanceof Model
             || !class_uses($user, AuthorizeTokens::class)
-            || !$this->session->has(SessionKeys::Token->value)) {
+            || !$this->session->has(SessionKeys::Token->value)
+        ) {
             return;
         }
 
         $this->user = $user->authorizeWithToken($this->session->get(SessionKeys::Token->value));
-
-        if (!$this->user) {
-            $this->session->remove(SessionKeys::Token->value);
-        }
     }
 
     private function renderError(Exception $exception): string
@@ -94,7 +92,7 @@ class Application
         if (!isset($this->view) || is_null($file)) {
             ob_start();
 
-            include_once __DIR__ . '/Views/_errors.php';
+            include_once __DIR__ . '/Views/templates/_errors.php';
 
             return ob_get_clean();
         }

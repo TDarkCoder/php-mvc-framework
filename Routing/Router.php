@@ -56,7 +56,9 @@ class Router implements RouterContract
             [$callback, $middlewares] = $action;
 
             if ($this->matchUri($route)) {
-                $this->applyMiddlewares($middlewares);
+                $globalMiddlewares = config('middlewares') ?? [];
+
+                $this->applyMiddlewares($middlewares + $globalMiddlewares);
 
                 return $this->handleCallback($callback, $route);
             }

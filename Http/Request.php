@@ -40,9 +40,19 @@ class Request
         return $this->data;
     }
 
+    public function get(string $key): mixed
+    {
+        return $this->data[$key] ?? null;
+    }
+
     public function getError(string $attribute): string|bool
     {
         return $this->errors[$attribute][0] ?? false;
+    }
+
+    public function has(string $key): bool
+    {
+        return isset($this->data[$key]);
     }
 
     public function isGet(): bool

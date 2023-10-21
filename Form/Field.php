@@ -3,6 +3,7 @@
 namespace TDarkCoder\Framework\Form;
 
 use TDarkCoder\Framework\Enums\InputTypes;
+use TDarkCoder\Framework\Enums\SessionKeys;
 
 abstract class Field
 {
@@ -64,6 +65,14 @@ abstract class Field
     public function password(): static
     {
         $this->type = InputTypes::Password->value;
+
+        return $this;
+    }
+
+    public function token(): static
+    {
+        $this->hidden();
+        $this->default(session()->get(SessionKeys::Token->value));
 
         return $this;
     }

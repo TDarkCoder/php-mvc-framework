@@ -26,7 +26,7 @@ trait AuthorizeTokens
     {
         $token = AccessToken::findOne(['token' => $token]);
 
-        return static::findOne([$this->primaryKey => $token->user_id]);
+        return static::findOne([$this->primaryKey => $token?->user_id]);
     }
 
     public function logout(): void
@@ -34,6 +34,6 @@ trait AuthorizeTokens
         $token = AccessToken::findOne(['token' => session()->get(SessionKeys::Token->value)]);
         $token?->delete();
 
-        session()->unset(SessionKeys::Token->value);
+        session()->remove(SessionKeys::Token->value);
     }
 }
