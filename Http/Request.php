@@ -4,6 +4,7 @@ namespace TDarkCoder\Framework\Http;
 
 use TDarkCoder\Framework\Database\Model;
 use TDarkCoder\Framework\Enums\Rules;
+use TDarkCoder\Framework\Enums\SessionKeys;
 
 class Request
 {
@@ -47,7 +48,7 @@ class Request
 
     public function getError(string $attribute): string|bool
     {
-        return $this->errors[$attribute][0] ?? false;
+        return session()->getFlash(SessionKeys::OldInput->value)['errors'][$attribute][0] ?? false;
     }
 
     public function has(string $key): bool
@@ -68,6 +69,11 @@ class Request
     public function method(): string
     {
         return strtolower($this->data['_method'] ?? $_SERVER['REQUEST_METHOD'] ?? '');
+    }
+
+    public function old(string $attribute)
+    {
+        return session()->getFlash(SessionKeys::OldInput->value)['inputs'][$attribute] ?? null;
     }
 
     public function only(array $keys): array
@@ -91,6 +97,15 @@ class Request
         }
 
         return substr($path, 0, $queryPosition);
+    }
+
+    public function previousUrl(): string
+    {
+        if (isset($_SERVER['HTTP_REFERER'])) {
+            return $_SERVER['HTTP_REFERER'];
+        }
+
+        return $this->path();
     }
 
     public function validate(array $data): bool
@@ -149,7 +164,16 @@ class Request
             }
         }
 
-        return empty($this->errors);
+        session()->setFlash(SessionKeys::OldInput->value, [
+            'inputs' => $this->data,
+            'errors' => $this->errors,
+        ]);
+
+        if (!empty($this->errors)) {
+            redirect($this->previousUrl());
+        }
+
+        return true;
     }
 
     private function addError(string $attribute, Rules $rule, string $indicator = ''): void

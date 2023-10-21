@@ -16,7 +16,7 @@ class TextareaField extends Field
             request()->getError('description') ? 'is-invalid' : '',
             $this->attribute,
             $this->attribute,
-            request()->{$this->attribute} ?? $this->defaultValue,
+            request()->old($this->attribute) ?? $this->defaultValue,
         );
     }
 }

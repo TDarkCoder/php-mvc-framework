@@ -19,7 +19,7 @@ class InputField extends Field
             request()->getError($this->attribute) ? 'is-invalid' : '',
             $this->attribute,
             $this->attribute,
-            request()->{$this->attribute} ?? $this->defaultValue,
+            request()->old($this->attribute) ?? $this->defaultValue,
         );
     }
 }
