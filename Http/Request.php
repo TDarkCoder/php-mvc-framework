@@ -2,15 +2,14 @@
 
 namespace TDarkCoder\Framework\Http;
 
-use TDarkCoder\Framework\Database\Model;
-use TDarkCoder\Framework\Enums\Rules;
 use TDarkCoder\Framework\Enums\SessionKeys;
+use TDarkCoder\Framework\Exceptions\ValidationException;
+use TDarkCoder\Framework\Validation\Validator;
 
 class Request
 {
     private array $body;
     private array $data;
-    private array $errors = [];
     private array $query;
 
     public function __construct()
@@ -45,9 +44,33 @@ class Request
         return $this->data[$key] ?? $default;
     }
 
-    public function getError(string $attribute): string|bool
+    /**
+     * Validation errors flashed by the previous request.
+     *
+     * @return array<string, string[]>
+     */
+    public function errors(): array
     {
-        return session()->getFlash(SessionKeys::OldInput->value)['errors'][$attribute][0] ?? false;
+        return session()->getFlash(SessionKeys::Errors->value, []);
+    }
+
+    /**
+     * Flash the current input for the next request, leaving out secrets.
+     */
+    public function flash(): void
+    {
+        $inputs = array_filter(
+            $this->data,
+            fn(string|int $key): bool => !str_contains((string) $key, 'password') && $key !== '_token',
+            ARRAY_FILTER_USE_KEY,
+        );
+
+        session()->setFlash(SessionKeys::OldInput->value, $inputs);
+    }
+
+    public function getError(string $attribute): ?string
+    {
+        return $this->errors()[$attribute][0] ?? null;
     }
 
     public function has(string $key): bool
@@ -95,9 +118,9 @@ class Request
         return in_array($override, ['put', 'patch', 'delete'], true) ? $override : $method;
     }
 
-    public function old(string $attribute)
+    public function old(string $attribute, mixed $default = null): mixed
     {
-        return session()->getFlash(SessionKeys::OldInput->value)['inputs'][$attribute] ?? null;
+        return session()->getFlash(SessionKeys::OldInput->value, [])[$attribute] ?? $default;
     }
 
     public function only(array $keys): array
@@ -128,84 +151,16 @@ class Request
         return str_contains($this->header('Accept', ''), 'json');
     }
 
-    public function validate(array $data): bool
+    /**
+     * Validate the input and return the validated attributes. Failures throw
+     * a ValidationException which the application turns into a redirect
+     * back with the errors and old input, or a 422 JSON response.
+     *
+     * @throws ValidationException
+     */
+    public function validate(array $rules, array $messages = []): array
     {
-        foreach ($data as $attribute => $rules) {
-            $value = $this->data[$attribute] ?? '';
-            $value = is_array($value) ? $value : (string) $value;
-
-            $rules = explode('|', $rules);
-
-            foreach ($rules as $rule) {
-                $newRules = explode(':', $rule);
-
-                if (count($newRules) > 1) {
-                    [$rule, $indicator] = $newRules;
-
-                    if ($rule === Rules::Min->value && strlen($value) < $indicator) {
-                        $this->addError($attribute, Rules::Min, $indicator);
-                    }
-
-                    if ($rule === Rules::Max->value && strlen($value) > $indicator) {
-                        $this->addError($attribute, Rules::Max, $indicator);
-                    }
-
-                    if ($rule === Rules::LessOrEqual->value && $value > $indicator) {
-                        $this->addError($attribute, Rules::LessOrEqual, $indicator);
-                    }
-
-                    if ($rule === Rules::GreaterOrEqual->value && $value < $indicator) {
-                        $this->addError($attribute, Rules::GreaterOrEqual, $indicator);
-                    }
-
-                    if ($rule === Rules::Match->value && $value !== $this->{$indicator}) {
-                        $this->addError($attribute, Rules::Match, $indicator);
-                    }
-
-                    if ($rule === Rules::Unique->value) {
-                        $object = new $indicator();
-
-                        if ($object instanceof Model && $object->findOne([$attribute => $value])) {
-                            $this->addError($attribute, Rules::Unique, $attribute);
-                        }
-                    }
-                } else {
-                    if ($rule === Rules::Email->value && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                        $this->addError($attribute, Rules::Email);
-                    }
-
-                    if ($rule === Rules::Required->value && in_array($value, [null, '', [], false], true)) {
-                        $this->addError($attribute, Rules::Required);
-                    }
-
-                    if ($rule === Rules::Number->value && !is_numeric($value)) {
-                        $this->addError($attribute, Rules::Number);
-                    }
-                }
-            }
-        }
-
-        session()->setFlash(SessionKeys::OldInput->value, [
-            'inputs' => array_filter(
-                $this->data,
-                fn(string $key): bool => !str_contains($key, 'password') && $key !== '_token',
-                ARRAY_FILTER_USE_KEY,
-            ),
-            'errors' => $this->errors,
-        ]);
-
-        if (!empty($this->errors)) {
-            redirect($this->previousUrl())->send();
-
-            exit;
-        }
-
-        return true;
-    }
-
-    private function addError(string $attribute, Rules $rule, string $indicator = ''): void
-    {
-        $this->errors[$attribute][] = str_replace("{{$rule->value}}", $indicator, $rule->message());
+        return Validator::make($this->data, $rules, $messages)->validate();
     }
 
     private function parseBody(): array

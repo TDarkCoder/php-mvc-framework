@@ -10,6 +10,7 @@ use TDarkCoder\Framework\Database\Model;
 use TDarkCoder\Framework\Enums\SessionKeys;
 use TDarkCoder\Framework\Exceptions\HttpException;
 use TDarkCoder\Framework\Exceptions\ServerErrorException;
+use TDarkCoder\Framework\Exceptions\ValidationException;
 use TDarkCoder\Framework\Http\Request;
 use TDarkCoder\Framework\Http\Response;
 use TDarkCoder\Framework\Routing\Router;
@@ -76,6 +77,10 @@ class Application
 
     private function renderError(Throwable $exception): Response
     {
+        if ($exception instanceof ValidationException) {
+            return $this->renderValidationError($exception);
+        }
+
         if (!$exception instanceof HttpException) {
             $exception = new ServerErrorException(previous: $exception);
         }
@@ -85,6 +90,21 @@ class Application
         }
 
         return new Response($this->renderErrorView($exception), $exception->getStatusCode());
+    }
+
+    private function renderValidationError(ValidationException $exception): Response
+    {
+        if ($this->request->wantsJson()) {
+            return Response::json([
+                'message' => $exception->getMessage(),
+                'errors' => $exception->errors(),
+            ], $exception->getStatusCode());
+        }
+
+        $this->request->flash();
+        $this->session->setFlash(SessionKeys::Errors->value, $exception->errors());
+
+        return Response::redirect($this->request->previousUrl());
     }
 
     private function renderErrorView(HttpException $exception): string
