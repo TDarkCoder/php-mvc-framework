@@ -2,33 +2,49 @@
 
 namespace TDarkCoder\Framework\Database;
 
-use Exception;
 use PDO;
+use PDOException;
 use TDarkCoder\Framework\Contracts\Migration;
 use TDarkCoder\Framework\Exceptions\ServerErrorException;
 
 class Database
 {
     private array $loadedMigrations = [];
-    private PDO $pdo;
+    private ?PDO $pdo = null;
 
-    /**
-     * @throws Exception
-     */
-    public function __construct()
+    public function __construct(private readonly array $config = [])
     {
-        try {
-            $this->pdo = new PDO(config('database.dsn'), config('database.username'), config('database.password'));
-
-            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        } catch (Exception) {
-            throw new ServerErrorException();
-        }
     }
 
+    /**
+     * @throws ServerErrorException
+     */
     public function pdo(): PDO
     {
-        return $this->pdo;
+        return $this->pdo ??= $this->connect();
+    }
+
+    /**
+     * @throws ServerErrorException
+     */
+    private function connect(): PDO
+    {
+        $config = $this->config ?: (config('database') ?? []);
+
+        try {
+            return new PDO(
+                $config['dsn'] ?? '',
+                $config['username'] ?? null,
+                $config['password'] ?? null,
+                ($config['options'] ?? []) + [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                ],
+            );
+        } catch (PDOException $exception) {
+            throw new ServerErrorException('Could not connect to the database', $exception);
+        }
     }
 
     public function rollbackMigrations(): void
@@ -36,7 +52,7 @@ class Database
         foreach (array_reverse($this->appliedMigrations()) as $migration) {
             $this->log("Rolling back migration $migration");
 
-            $this->pdo->exec($this->loadMigration($migration)->down());
+            $this->pdo()->exec($this->loadMigration($migration)->down());
             $this->forgetMigration($migration);
 
             $this->log("Rolled back migration $migration");
@@ -47,17 +63,17 @@ class Database
 
     public function refreshDatabase(): void
     {
-        $statement = $this->pdo->query("SHOW TABLES");
+        $statement = $this->pdo()->query("SHOW TABLES");
 
-        $this->pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
+        $this->pdo()->exec("SET FOREIGN_KEY_CHECKS = 0");
 
         foreach ($statement->fetchAll(PDO::FETCH_COLUMN) as $table) {
-            $this->pdo->exec("DROP TABLE IF EXISTS `$table`");
+            $this->pdo()->exec("DROP TABLE IF EXISTS `$table`");
 
             $this->log("Deleted table: $table");
         }
 
-        $this->pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
+        $this->pdo()->exec("SET FOREIGN_KEY_CHECKS = 1");
 
         $this->runMigrations();
 
@@ -82,7 +98,7 @@ class Database
         foreach ($migrations as $migration) {
             $this->log("Applying migration $migration");
 
-            $this->pdo->exec($this->loadMigration($migration)->up());
+            $this->pdo()->exec($this->loadMigration($migration)->up());
             $this->saveMigration($migration);
 
             $this->log("Applied migration $migration");
@@ -91,12 +107,12 @@ class Database
 
     private function appliedMigrations(): array
     {
-        return $this->pdo->query("SELECT `migration` FROM `migrations` ORDER BY `id`")->fetchAll(PDO::FETCH_COLUMN);
+        return $this->pdo()->query("SELECT `migration` FROM `migrations` ORDER BY `id`")->fetchAll(PDO::FETCH_COLUMN);
     }
 
     private function createMigrationsTable(): void
     {
-        $this->pdo->exec("
+        $this->pdo()->exec("
             CREATE TABLE IF NOT EXISTS `migrations` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
                 `migration` VARCHAR(255) NOT NULL UNIQUE,
@@ -107,7 +123,7 @@ class Database
 
     private function forgetMigration(string $migration): void
     {
-        $statement = $this->pdo->prepare("DELETE FROM `migrations` WHERE `migration` = :migration");
+        $statement = $this->pdo()->prepare("DELETE FROM `migrations` WHERE `migration` = :migration");
         $statement->execute(['migration' => $migration]);
     }
 
@@ -136,7 +152,7 @@ class Database
 
     private function saveMigration(string $migration): void
     {
-        $statement = $this->pdo->prepare("INSERT INTO `migrations` (`migration`) VALUES (:migration)");
+        $statement = $this->pdo()->prepare("INSERT INTO `migrations` (`migration`) VALUES (:migration)");
         $statement->execute(['migration' => $migration]);
     }
 }
