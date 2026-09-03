@@ -186,7 +186,11 @@ class Request
         }
 
         session()->setFlash(SessionKeys::OldInput->value, [
-            'inputs' => $this->data,
+            'inputs' => array_filter(
+                $this->data,
+                fn(string $key): bool => !str_contains($key, 'password') && $key !== '_token',
+                ARRAY_FILTER_USE_KEY,
+            ),
             'errors' => $this->errors,
         ]);
 
