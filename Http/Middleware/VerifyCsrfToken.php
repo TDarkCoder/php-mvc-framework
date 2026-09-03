@@ -43,7 +43,7 @@ class VerifyCsrfToken implements Middleware
             return false;
         }
 
-        return $request->get('_token') === session()->get(SessionKeys::Token->value);
+        return $request->get('_token') === session()->get(SessionKeys::CsrfToken->value);
     }
 
     private function isException(Request $request): bool

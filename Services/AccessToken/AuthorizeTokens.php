@@ -19,7 +19,7 @@ trait AuthorizeTokens
             'device' => $_SERVER['HTTP_USER_AGENT'],
         ]);
 
-        session()->set(SessionKeys::Token->value, $token->token);
+        session()->set(SessionKeys::AuthToken->value, $token->token);
     }
 
     public function authorizeWithToken(string $token): ?Model
@@ -31,9 +31,9 @@ trait AuthorizeTokens
 
     public function logout(): void
     {
-        $token = AccessToken::findOne(['token' => session()->get(SessionKeys::Token->value)]);
+        $token = AccessToken::findOne(['token' => session()->get(SessionKeys::AuthToken->value)]);
         $token?->delete();
 
-        session()->remove(SessionKeys::Token->value);
+        session()->remove(SessionKeys::AuthToken->value);
     }
 }

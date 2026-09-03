@@ -19,8 +19,8 @@ class Session implements SessionContract
         $this->flash = SessionKeys::Flash->value;
         $this->initializeFlashMessages();
 
-        if (!isset($_SESSION[SessionKeys::Token->value])) {
-            $_SESSION[SessionKeys::Token->value] = bin2hex(random_bytes(32));
+        if (!isset($_SESSION[SessionKeys::CsrfToken->value])) {
+            $_SESSION[SessionKeys::CsrfToken->value] = bin2hex(random_bytes(32));
         }
     }
 

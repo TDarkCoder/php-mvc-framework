@@ -72,7 +72,7 @@ abstract class Field
     public function token(): static
     {
         $this->hidden();
-        $this->default(session()->get(SessionKeys::Token->value));
+        $this->default(session()->get(SessionKeys::CsrfToken->value));
 
         return $this;
     }

@@ -69,12 +69,12 @@ class Application
         if (
             !$user instanceof Model
             || !class_uses($user, AuthorizeTokens::class)
-            || !$this->session->has(SessionKeys::Token->value)
+            || !$this->session->has(SessionKeys::AuthToken->value)
         ) {
             return;
         }
 
-        $this->user = $user->authorizeWithToken($this->session->get(SessionKeys::Token->value));
+        $this->user = $user->authorizeWithToken($this->session->get(SessionKeys::AuthToken->value));
     }
 
     private function renderError(Exception $exception): string
