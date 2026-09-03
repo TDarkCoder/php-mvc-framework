@@ -3,45 +3,51 @@
 namespace TDarkCoder\Framework\Session;
 
 use Exception;
+use TDarkCoder\Framework\Contracts\Session as SessionContract;
 use TDarkCoder\Framework\Enums\SessionKeys;
 
 class Session implements SessionContract
 {
-    private string $flash;
-
     /**
      * @throws Exception
      */
     public function __construct()
     {
         $this->start();
-
-        $this->flash = SessionKeys::Flash->value;
-        $this->initializeFlashMessages();
+        $this->ageFlashData();
 
         if (!isset($_SESSION[SessionKeys::CsrfToken->value])) {
             $this->regenerateToken();
         }
     }
 
-    public function __destruct()
+    public function all(): array
     {
-        $this->removeFlashMessages();
+        return $_SESSION;
     }
 
-    public function set(string $key, mixed $value): void
+    public function get(string $key, mixed $default = null): mixed
     {
-        $_SESSION[$key] = $value;
+        return $_SESSION[$key] ?? $default;
     }
 
-    public function get(string $key): mixed
+    public function getFlash(string $key, mixed $default = null): mixed
     {
-        return $_SESSION[$key] ?? null;
+        $flash = $_SESSION[SessionKeys::Flash->value] ?? [];
+
+        return $flash['old'][$key] ?? $flash['new'][$key] ?? $default;
     }
 
     public function has(string $key): bool
     {
         return isset($_SESSION[$key]);
+    }
+
+    public function hasFlash(string $key): bool
+    {
+        $flash = $_SESSION[SessionKeys::Flash->value] ?? [];
+
+        return isset($flash['old'][$key]) || isset($flash['new'][$key]);
     }
 
     public function invalidate(): void
@@ -72,27 +78,19 @@ class Session implements SessionContract
         unset($_SESSION[$key]);
     }
 
-    public function setFlash(string $key, mixed $value): void
-    {
-        $_SESSION[$this->flash][$key] = [
-            'remove' => false,
-            'value' => $value,
-        ];
-    }
-
-    public function getFlash(string $key): mixed
-    {
-        return $_SESSION[$this->flash][$key]['value'] ?? null;
-    }
-
-    public function hasFlash(string $key): bool
-    {
-        return isset($_SESSION[$this->flash][$key]);
-    }
-
     public function removeFlash(string $key): void
     {
-        unset($_SESSION[$this->flash][$key]);
+        unset($_SESSION[SessionKeys::Flash->value]['old'][$key], $_SESSION[SessionKeys::Flash->value]['new'][$key]);
+    }
+
+    public function set(string $key, mixed $value): void
+    {
+        $_SESSION[$key] = $value;
+    }
+
+    public function setFlash(string $key, mixed $value): void
+    {
+        $_SESSION[SessionKeys::Flash->value]['new'][$key] = $value;
     }
 
     public function token(): string
@@ -100,14 +98,18 @@ class Session implements SessionContract
         return $_SESSION[SessionKeys::CsrfToken->value];
     }
 
-    private function initializeFlashMessages(): void
+    /**
+     * Flash data written during the previous request becomes readable now
+     * and is dropped at the start of the next request.
+     */
+    private function ageFlashData(): void
     {
-        foreach ($_SESSION[$this->flash] ?? [] as $key => $session) {
-            $_SESSION[$this->flash][$key] = [
-                'remove' => true,
-                'value' => $session['value'],
-            ];
-        }
+        $flash = $_SESSION[SessionKeys::Flash->value] ?? [];
+
+        $_SESSION[SessionKeys::Flash->value] = [
+            'old' => $flash['new'] ?? [],
+            'new' => [],
+        ];
     }
 
     private function isSecure(): bool
@@ -115,15 +117,6 @@ class Session implements SessionContract
         return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
             || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'
             || (int) ($_SERVER['SERVER_PORT'] ?? 0) === 443;
-    }
-
-    private function removeFlashMessages(): void
-    {
-        foreach ($_SESSION[$this->flash] ?? [] as $key => $value) {
-            if ($value['remove'] === true) {
-                unset($_SESSION[$this->flash][$key]);
-            }
-        }
     }
 
     private function start(): void

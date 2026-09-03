@@ -2,8 +2,8 @@
 
 namespace TDarkCoder\Framework\Http\Middleware;
 
+use TDarkCoder\Framework\Contracts\Middleware;
 use TDarkCoder\Framework\Exceptions\PageExpiredException;
-use TDarkCoder\Framework\Http\Middleware;
 use TDarkCoder\Framework\Http\Request;
 
 class VerifyCsrfToken implements Middleware

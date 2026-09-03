@@ -1,8 +1,8 @@
 <?php
 
-namespace TDarkCoder\Framework\Views;
+namespace TDarkCoder\Framework\Contracts;
 
-interface ViewContract
+interface View
 {
     public function layout(?string $layout): static;
 

@@ -4,8 +4,8 @@ namespace TDarkCoder\Framework\Enums;
 
 enum SessionKeys: string
 {
-    case AuthToken = 'auth_token';
-    case CsrfToken = 'csrf_token';
-    case Flash = 'flash_message';
-    case OldInput = 'old_input';
+    case AuthToken = '_auth_token';
+    case CsrfToken = '_csrf_token';
+    case Flash = '_flash';
+    case OldInput = '_old_input';
 }

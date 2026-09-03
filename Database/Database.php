@@ -4,6 +4,7 @@ namespace TDarkCoder\Framework\Database;
 
 use Exception;
 use PDO;
+use TDarkCoder\Framework\Contracts\Migration;
 use TDarkCoder\Framework\Exceptions\ServerErrorException;
 
 class Database

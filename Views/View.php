@@ -2,6 +2,8 @@
 
 namespace TDarkCoder\Framework\Views;
 
+use TDarkCoder\Framework\Contracts\View as ViewContract;
+
 class View implements ViewContract
 {
     private ?string $layout = null;

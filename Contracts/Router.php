@@ -1,10 +1,10 @@
 <?php
 
-namespace TDarkCoder\Framework\Routing;
+namespace TDarkCoder\Framework\Contracts;
 
 use Closure;
 
-interface RouterContract
+interface Router
 {
     public function delete(string $path, Closure|string|array $callback): self;
 

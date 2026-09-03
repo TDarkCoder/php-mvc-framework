@@ -3,6 +3,8 @@
 namespace TDarkCoder\Framework;
 
 use TDarkCoder\Framework\Contracts\Authenticatable;
+use TDarkCoder\Framework\Contracts\Router as RouterContract;
+use TDarkCoder\Framework\Contracts\View as ViewContract;
 use TDarkCoder\Framework\Database\Database;
 use TDarkCoder\Framework\Database\Model;
 use TDarkCoder\Framework\Enums\SessionKeys;
@@ -10,10 +12,8 @@ use TDarkCoder\Framework\Exceptions\HttpException;
 use TDarkCoder\Framework\Exceptions\ServerErrorException;
 use TDarkCoder\Framework\Http\Request;
 use TDarkCoder\Framework\Routing\Router;
-use TDarkCoder\Framework\Routing\RouterContract;
 use TDarkCoder\Framework\Session\Session;
 use TDarkCoder\Framework\Views\View;
-use TDarkCoder\Framework\Views\ViewContract;
 use Throwable;
 
 class Application
