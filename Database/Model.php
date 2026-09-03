@@ -92,20 +92,28 @@ abstract class Model
      */
     public function save(): static
     {
-        $keys = $attributes = [];
+        $attributes = $this->data;
 
-        foreach ($this->data as $key => $value) {
-            if (!in_array($key, $this->fillable)) {
+        unset($attributes[$this->primaryKey]);
+
+        foreach (array_keys($attributes) as $key) {
+            if (!in_array($key, $this->fillable, true)) {
                 throw new ServerErrorException('Mass assignment failed for ' . $this->table());
             }
-
-            $keys[] = "`$key`";
-            $attributes[] = ":$key";
         }
 
-        $statement = $this->prepare("INSERT INTO " . $this->table() . " (" . implode(', ', $keys) . ") VALUES (" . implode(',', $attributes) . ")");
+        if (isset($this->data[$this->primaryKey])) {
+            $this->update($attributes);
 
-        foreach ($this->data as $key => $value) {
+            return $this;
+        }
+
+        $keys = array_map(fn(string $key): string => "`$key`", array_keys($attributes));
+        $placeholders = array_map(fn(string $key): string => ":$key", array_keys($attributes));
+
+        $statement = $this->prepare("INSERT INTO " . $this->table() . " (" . implode(', ', $keys) . ") VALUES (" . implode(', ', $placeholders) . ")");
+
+        foreach ($attributes as $key => $value) {
             $statement->bindValue(":$key", $value);
         }
 
@@ -142,7 +150,7 @@ abstract class Model
             $where[] = "`$key` = :$key";
         }
 
-        $statement = $this->prepare("SELECT * FROM " . $this->table() . " WHERE " . implode('AND', $where));
+        $statement = $this->prepare("SELECT * FROM " . $this->table() . " WHERE " . implode(' AND ', $where));
 
         foreach ($params as $key => $value) {
             $statement->bindValue(":$key", $value);
