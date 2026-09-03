@@ -3,10 +3,17 @@
 namespace TDarkCoder\Framework\Views;
 
 use TDarkCoder\Framework\Contracts\View as ViewContract;
+use TDarkCoder\Framework\Exceptions\ViewNotFoundException;
+use Throwable;
 
 class View implements ViewContract
 {
     private ?string $layout = null;
+
+    public function exists(string $view): bool
+    {
+        return is_file($this->path($view));
+    }
 
     public function layout(?string $layout): static
     {
@@ -15,25 +22,57 @@ class View implements ViewContract
         return $this;
     }
 
+    /**
+     * @throws ViewNotFoundException
+     */
     public function render(string $view, array $params = []): string
     {
-        $content = $this->renderFile(basePath("/views/$view.php"), $params);
+        $content = $this->renderFile($view, $params);
 
         if (is_null($this->layout)) {
             return $content;
         }
 
-        return $this->renderFile(basePath("/views/layouts/$this->layout.php"), ['content' => $content] + $params);
+        return $this->renderFile("layouts/$this->layout", ['content' => $content] + $params);
     }
 
-    private function renderFile(string $__file, array $__params): string
+    private function path(string $view): string
     {
-        ob_start();
+        $directory = rtrim(config('views.path') ?? basePath('/views'), '/');
 
-        extract($__params, EXTR_SKIP);
+        return $directory . '/' . str_replace('.', '/', $view) . '.php';
+    }
 
-        include $__file;
+    /**
+     * Templates run inside a static closure so they cannot reach into the
+     * View instance through $this.
+     *
+     * @throws ViewNotFoundException
+     */
+    private function renderFile(string $view, array $params): string
+    {
+        $file = $this->path($view);
 
-        return ob_get_clean();
+        if (!is_file($file)) {
+            throw new ViewNotFoundException("View [$view] not found");
+        }
+
+        $render = static function (string $__file, array $__params): string {
+            ob_start();
+
+            extract($__params, EXTR_SKIP);
+
+            try {
+                include $__file;
+            } catch (Throwable $exception) {
+                ob_end_clean();
+
+                throw $exception;
+            }
+
+            return ob_get_clean();
+        };
+
+        return $render($file, $params);
     }
 }

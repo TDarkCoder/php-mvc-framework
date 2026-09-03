@@ -91,9 +91,11 @@ class Application
     {
         $status = $exception->getStatusCode();
 
-        foreach (["_errors/$status", '_errors'] as $view) {
-            if (file_exists(basePath("/views/$view.php"))) {
-                return (new View())->render($view, compact('exception'));
+        $view = new View();
+
+        foreach (["_errors/$status", '_errors'] as $name) {
+            if ($view->exists($name)) {
+                return $view->render($name, compact('exception'));
             }
         }
 
