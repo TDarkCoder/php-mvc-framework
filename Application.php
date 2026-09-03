@@ -2,10 +2,11 @@
 
 namespace TDarkCoder\Framework;
 
-use Exception;
 use TDarkCoder\Framework\Database\Database;
 use TDarkCoder\Framework\Database\Model;
 use TDarkCoder\Framework\Enums\SessionKeys;
+use TDarkCoder\Framework\Exceptions\HttpException;
+use TDarkCoder\Framework\Exceptions\ServerErrorException;
 use TDarkCoder\Framework\Http\Request;
 use TDarkCoder\Framework\Routing\Router;
 use TDarkCoder\Framework\Routing\RouterContract;
@@ -13,6 +14,7 @@ use TDarkCoder\Framework\Services\AccessToken\AuthorizeTokens;
 use TDarkCoder\Framework\Session\Session;
 use TDarkCoder\Framework\Views\View;
 use TDarkCoder\Framework\Views\ViewContract;
+use Throwable;
 
 class Application
 {
@@ -31,7 +33,7 @@ class Application
         try {
             $this->initializeComponents();
             $this->initializeUser();
-        } catch (Exception $exception) {
+        } catch (Throwable $exception) {
             echo $this->renderError($exception);
 
             exit(1);
@@ -42,7 +44,7 @@ class Application
     {
         try {
             echo $this->router->resolve();
-        } catch (Exception $exception) {
+        } catch (Throwable $exception) {
             echo $this->renderError($exception);
         }
 
@@ -77,12 +79,18 @@ class Application
         $this->user = $user->authorizeWithToken($this->session->get(SessionKeys::AuthToken->value));
     }
 
-    private function renderError(Exception $exception): string
+    private function renderError(Throwable $exception): string
     {
+        if (!$exception instanceof HttpException) {
+            $exception = new ServerErrorException(previous: $exception);
+        }
+
+        http_response_code($exception->getStatusCode());
+
         $file = null;
 
-        if (file_exists(basePath("/views/_errors/{$exception->getCode()}.php"))) {
-            $file = "_errors/{$exception->getCode()}";
+        if (file_exists(basePath("/views/_errors/{$exception->getStatusCode()}.php"))) {
+            $file = "_errors/{$exception->getStatusCode()}";
         }
 
         if (is_null($file) && file_exists(basePath('/views/_errors.php'))) {
@@ -92,11 +100,11 @@ class Application
         if (!isset($this->view) || is_null($file)) {
             ob_start();
 
-            include_once __DIR__ . '/Views/templates/_errors.php';
+            include __DIR__ . '/Views/templates/_errors.php';
 
             return ob_get_clean();
         }
 
-        return $this->view->render($file, compact('exception'));
+        return $this->view->layout(null)->render($file, compact('exception'));
     }
 }

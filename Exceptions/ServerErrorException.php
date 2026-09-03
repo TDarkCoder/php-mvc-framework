@@ -2,9 +2,7 @@
 
 namespace TDarkCoder\Framework\Exceptions;
 
-use Exception;
-
-class ServerErrorException extends Exception
+class ServerErrorException extends HttpException
 {
     protected $code = 500;
     protected $message = 'Server error';

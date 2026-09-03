@@ -2,9 +2,7 @@
 
 namespace TDarkCoder\Framework\Exceptions;
 
-use Exception;
-
-class ForbiddenException extends Exception
+class ForbiddenException extends HttpException
 {
     protected $code = 403;
     protected $message = 'Access forbidden';

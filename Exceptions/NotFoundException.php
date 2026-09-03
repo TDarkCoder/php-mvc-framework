@@ -2,9 +2,7 @@
 
 namespace TDarkCoder\Framework\Exceptions;
 
-use Exception;
-
-class NotFoundException extends Exception
+class NotFoundException extends HttpException
 {
     protected $code = 404;
     protected $message = 'Page not found';
