@@ -46,27 +46,51 @@ if (!function_exists('basePath')) {
 }
 
 if (!function_exists('config')) {
-    function config(string $key): mixed
+    /**
+     * Read a config value using dot notation, e.g. config('database.dsn').
+     */
+    function config(string $key, mixed $default = null): mixed
     {
         $config = app()->config;
-        $keys = explode('.', $key);
 
-        foreach ($keys as $key) {
-            $config = $config[$key] ?? null;
-
-            if (is_null($config)) {
-                return null;
+        foreach (explode('.', $key) as $segment) {
+            if (!is_array($config) || !array_key_exists($segment, $config)) {
+                return $default;
             }
+
+            $config = $config[$segment];
         }
 
-        return $config;
+        return $config ?? $default;
+    }
+}
+
+if (!function_exists('csrf_field')) {
+    function csrf_field(): string
+    {
+        return '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">';
+    }
+}
+
+if (!function_exists('csrf_token')) {
+    function csrf_token(): string
+    {
+        return session()->token();
     }
 }
 
 if (!function_exists('dd')) {
-    function dd(mixed $data): never
+    function dd(mixed ...$vars): never
     {
-        var_dump($data);
+        foreach ($vars as $var) {
+            ob_start();
+
+            var_dump($var);
+
+            $dump = (string) ob_get_clean();
+
+            echo PHP_SAPI === 'cli' ? $dump : '<pre style="background:#18181b;color:#fafafa;padding:1rem;overflow:auto">' . e($dump) . '</pre>';
+        }
 
         exit(1);
     }
@@ -80,9 +104,39 @@ if (!function_exists('e')) {
 }
 
 if (!function_exists('env')) {
-    function env(string $key, string $default = ''): mixed
+    /**
+     * Read an environment variable, casting "true", "false", "null" and
+     * "empty" to their PHP equivalents.
+     */
+    function env(string $key, mixed $default = null): mixed
     {
-        return $_ENV[$key] ?? $default;
+        $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+
+        if ($value === false || $value === null) {
+            return $default;
+        }
+
+        return match (strtolower((string) $value)) {
+            'true', '(true)' => true,
+            'false', '(false)' => false,
+            'null', '(null)' => null,
+            'empty', '(empty)' => '',
+            default => $value,
+        };
+    }
+}
+
+if (!function_exists('method_field')) {
+    function method_field(string $method): string
+    {
+        return '<input type="hidden" name="_method" value="' . e(strtoupper($method)) . '">';
+    }
+}
+
+if (!function_exists('old')) {
+    function old(string $key, mixed $default = null): mixed
+    {
+        return request()->old($key, $default);
     }
 }
 
