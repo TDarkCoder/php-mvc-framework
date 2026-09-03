@@ -126,7 +126,7 @@ class Request
                     }
 
                     if ($rule === Rules::Max->value && strlen($value) > $indicator) {
-                        $this->addError($attribute, Rules::Min, $indicator);
+                        $this->addError($attribute, Rules::Max, $indicator);
                     }
 
                     if ($rule === Rules::LessOrEqual->value && $value > $indicator) {
@@ -153,7 +153,7 @@ class Request
                         $this->addError($attribute, Rules::Email);
                     }
 
-                    if ($rule === Rules::Required->value && !$value) {
+                    if ($rule === Rules::Required->value && in_array($value, [null, '', [], false], true)) {
                         $this->addError($attribute, Rules::Required);
                     }
 
