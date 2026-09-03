@@ -107,6 +107,13 @@ if (!function_exists('response')) {
     }
 }
 
+if (!function_exists('route')) {
+    function route(string $name, array $parameters = []): string
+    {
+        return app()->router->route($name, $parameters);
+    }
+}
+
 if (!function_exists('session')) {
     function session(): Session
     {
