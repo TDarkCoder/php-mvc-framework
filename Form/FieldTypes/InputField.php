@@ -15,11 +15,11 @@ class InputField extends Field
                    name="%s"
                    value="%s">
         ',
-            $this->type,
+            e($this->type),
             request()->getError($this->attribute) ? 'is-invalid' : '',
-            $this->attribute,
-            $this->attribute,
-            request()->old($this->attribute) ?? $this->defaultValue,
+            e($this->attribute),
+            e($this->attribute),
+            e(request()->old($this->attribute) ?? $this->defaultValue),
         );
     }
 }

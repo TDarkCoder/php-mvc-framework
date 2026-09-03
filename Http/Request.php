@@ -8,22 +8,16 @@ use TDarkCoder\Framework\Enums\SessionKeys;
 
 class Request
 {
-    private array $data = [];
+    private array $body;
+    private array $data;
     private array $errors = [];
+    private array $query;
 
     public function __construct()
     {
-        if ($this->isGet()) {
-            foreach ($_GET as $key => $value) {
-                $this->data[$key] = filter_input(INPUT_GET, $key, FILTER_SANITIZE_SPECIAL_CHARS);
-            }
-        }
-
-        if ($this->isPost()) {
-            foreach ($_POST as $key => $value) {
-                $this->data[$key] = filter_input(INPUT_POST, $key, FILTER_SANITIZE_SPECIAL_CHARS);
-            }
-        }
+        $this->query = $_GET;
+        $this->body = $this->parseBody();
+        $this->data = array_merge($this->query, $this->body);
     }
 
     public function __get(string $name): mixed
@@ -41,9 +35,14 @@ class Request
         return $this->data;
     }
 
-    public function get(string $key): mixed
+    public function except(array $keys): array
     {
-        return $this->data[$key] ?? null;
+        return array_diff_key($this->data, array_flip($keys));
+    }
+
+    public function get(string $key, mixed $default = null): mixed
+    {
+        return $this->data[$key] ?? $default;
     }
 
     public function getError(string $attribute): string|bool
@@ -56,9 +55,26 @@ class Request
         return isset($this->data[$key]);
     }
 
+    public function header(string $name, ?string $default = null): ?string
+    {
+        $key = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
+
+        return $_SERVER[$key] ?? $default;
+    }
+
+    public function input(string $key, mixed $default = null): mixed
+    {
+        return $this->data[$key] ?? $default;
+    }
+
     public function isGet(): bool
     {
         return $this->method() === 'get';
+    }
+
+    public function isJson(): bool
+    {
+        return str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'json');
     }
 
     public function isPost(): bool
@@ -68,7 +84,15 @@ class Request
 
     public function method(): string
     {
-        return strtolower($this->data['_method'] ?? $_SERVER['REQUEST_METHOD'] ?? '');
+        $method = strtolower($_SERVER['REQUEST_METHOD'] ?? 'get');
+
+        if ($method !== 'post') {
+            return $method;
+        }
+
+        $override = strtolower((string) ($this->body['_method'] ?? ''));
+
+        return in_array($override, ['put', 'patch', 'delete'], true) ? $override : $method;
     }
 
     public function old(string $attribute)
@@ -89,29 +113,26 @@ class Request
 
     public function path(): string
     {
-        $path = $_SERVER['REQUEST_URI'];
-        $queryPosition = strpos($path, '?');
+        $path = explode('?', $_SERVER['REQUEST_URI'] ?? '/', 2)[0];
 
-        if (!$queryPosition) {
-            return $path;
-        }
-
-        return substr($path, 0, $queryPosition);
+        return rawurldecode($path) ?: '/';
     }
 
     public function previousUrl(): string
     {
-        if (isset($_SERVER['HTTP_REFERER'])) {
-            return $_SERVER['HTTP_REFERER'];
-        }
+        return $_SERVER['HTTP_REFERER'] ?? $this->path();
+    }
 
-        return $this->path();
+    public function wantsJson(): bool
+    {
+        return str_contains($this->header('Accept', ''), 'json');
     }
 
     public function validate(array $data): bool
     {
         foreach ($data as $attribute => $rules) {
             $value = $this->data[$attribute] ?? '';
+            $value = is_array($value) ? $value : (string) $value;
 
             $rules = explode('|', $rules);
 
@@ -178,6 +199,29 @@ class Request
 
     private function addError(string $attribute, Rules $rule, string $indicator = ''): void
     {
-        $this->errors[$attribute][] = str_replace("{{$rule->value}}", $indicator, $rule->message()) ?? 'Unknown error';
+        $this->errors[$attribute][] = str_replace("{{$rule->value}}", $indicator, $rule->message());
+    }
+
+    private function parseBody(): array
+    {
+        $method = strtolower($_SERVER['REQUEST_METHOD'] ?? 'get');
+
+        if (in_array($method, ['get', 'head', 'options'], true)) {
+            return [];
+        }
+
+        if ($this->isJson()) {
+            $decoded = json_decode((string) file_get_contents('php://input'), true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        if ($method === 'post') {
+            return $_POST;
+        }
+
+        parse_str((string) file_get_contents('php://input'), $body);
+
+        return $body;
     }
 }

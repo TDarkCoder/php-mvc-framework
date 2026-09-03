@@ -19,7 +19,7 @@ class Form
 
     public function start(string $action, string $method): string
     {
-        return sprintf('<form action="%s" method="%s">', $action, $method);
+        return sprintf('<form action="%s" method="%s">', e($action), e($method));
     }
 
     public function text(string $attribute, ?string $label = null): Field

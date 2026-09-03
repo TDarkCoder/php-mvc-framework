@@ -26,11 +26,11 @@ abstract class Field
                 %s
             </div>
         ',
-            $this->attribute,
+            e($this->attribute),
             $this->type === InputTypes::Hidden->value ? 'd-none' : '',
-            $this->label ?? ucfirst($this->attribute),
+            e($this->label ?? ucfirst($this->attribute)),
             $this->renderField(),
-            request()->getError($this->attribute),
+            e(request()->getError($this->attribute)),
         );
     }
 
