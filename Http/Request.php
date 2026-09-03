@@ -195,7 +195,9 @@ class Request
         ]);
 
         if (!empty($this->errors)) {
-            redirect($this->previousUrl());
+            redirect($this->previousUrl())->send();
+
+            exit;
         }
 
         return true;

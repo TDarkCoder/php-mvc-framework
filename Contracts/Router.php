@@ -3,6 +3,7 @@
 namespace TDarkCoder\Framework\Contracts;
 
 use Closure;
+use TDarkCoder\Framework\Http\Response;
 
 interface Router
 {
@@ -14,5 +15,5 @@ interface Router
 
     public function post(string $path, Closure|string|array $callback): self;
 
-    public function resolve(): mixed;
+    public function resolve(): Response;
 }

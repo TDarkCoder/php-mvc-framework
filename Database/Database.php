@@ -43,7 +43,7 @@ class Database
                 ],
             );
         } catch (PDOException $exception) {
-            throw new ServerErrorException('Could not connect to the database', $exception);
+            throw new ServerErrorException('Could not connect to the database', previous: $exception);
         }
     }
 

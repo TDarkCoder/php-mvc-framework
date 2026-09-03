@@ -10,6 +10,7 @@ use TDarkCoder\Framework\Contracts\Middleware;
 use TDarkCoder\Framework\Contracts\Router as RouterContract;
 use TDarkCoder\Framework\Exceptions\NotFoundException;
 use TDarkCoder\Framework\Http\Controller;
+use TDarkCoder\Framework\Http\Response;
 
 class Router implements RouterContract
 {
@@ -51,7 +52,7 @@ class Router implements RouterContract
     /**
      * @throws Exception
      */
-    public function resolve(): mixed
+    public function resolve(): Response
     {
         foreach ($this->routes[request()->method()] ?? [] as $route => $action) {
             [$callback, $middlewares] = $action;
@@ -61,7 +62,7 @@ class Router implements RouterContract
 
                 $this->applyMiddlewares(array_merge($globalMiddlewares, $middlewares));
 
-                return $this->handleCallback($callback, $route);
+                return Response::from($this->handleCallback($callback, $route));
             }
         }
 

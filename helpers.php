@@ -1,13 +1,40 @@
 <?php
 
 use TDarkCoder\Framework\Application;
+use TDarkCoder\Framework\Exceptions\ForbiddenException;
+use TDarkCoder\Framework\Exceptions\HttpException;
+use TDarkCoder\Framework\Exceptions\NotFoundException;
+use TDarkCoder\Framework\Exceptions\PageExpiredException;
 use TDarkCoder\Framework\Http\Request;
+use TDarkCoder\Framework\Http\Response;
 use TDarkCoder\Framework\Session\Session;
+
+if (!function_exists('abort')) {
+    /**
+     * @throws HttpException
+     */
+    function abort(int $code, string $message = ''): never
+    {
+        throw match ($code) {
+            403 => new ForbiddenException($message),
+            404 => new NotFoundException($message),
+            419 => new PageExpiredException($message),
+            default => new HttpException($message, $code),
+        };
+    }
+}
 
 if (!function_exists('app')) {
     function app(): Application
     {
         return Application::$app;
+    }
+}
+
+if (!function_exists('back')) {
+    function back(int $status = 302): Response
+    {
+        return redirect(request()->previousUrl(), $status);
     }
 }
 
@@ -60,11 +87,9 @@ if (!function_exists('env')) {
 }
 
 if (!function_exists('redirect')) {
-    function redirect(string $path): never
+    function redirect(string $path, int $status = 302): Response
     {
-        header("Location: $path");
-
-        exit(1);
+        return Response::redirect($path, $status);
     }
 }
 
@@ -72,6 +97,13 @@ if (!function_exists('request')) {
     function request(): Request
     {
         return app()->request;
+    }
+}
+
+if (!function_exists('response')) {
+    function response(string $content = '', int $status = 200, array $headers = []): Response
+    {
+        return new Response($content, $status, $headers);
     }
 }
 

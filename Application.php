@@ -11,6 +11,7 @@ use TDarkCoder\Framework\Enums\SessionKeys;
 use TDarkCoder\Framework\Exceptions\HttpException;
 use TDarkCoder\Framework\Exceptions\ServerErrorException;
 use TDarkCoder\Framework\Http\Request;
+use TDarkCoder\Framework\Http\Response;
 use TDarkCoder\Framework\Routing\Router;
 use TDarkCoder\Framework\Session\Session;
 use TDarkCoder\Framework\Views\View;
@@ -30,29 +31,6 @@ class Application
     {
         self::$app = $this;
 
-        try {
-            $this->initializeComponents();
-            $this->initializeUser();
-        } catch (Throwable $exception) {
-            echo $this->renderError($exception);
-
-            exit(1);
-        }
-    }
-
-    public function run(): never
-    {
-        try {
-            echo $this->router->resolve();
-        } catch (Throwable $exception) {
-            echo $this->renderError($exception);
-        }
-
-        exit(1);
-    }
-
-    private function initializeComponents(): void
-    {
         $this->database = new Database();
         $this->request = new Request();
         $this->session = new Session();
@@ -60,51 +38,69 @@ class Application
         $this->view = new View();
     }
 
+    /**
+     * Resolve the current request into a response without sending it.
+     */
+    public function handle(): Response
+    {
+        try {
+            $this->initializeUser();
+
+            return $this->router->resolve();
+        } catch (Throwable $exception) {
+            return $this->renderError($exception);
+        }
+    }
+
+    public function run(): void
+    {
+        $this->handle()->send();
+    }
+
     private function initializeUser(): void
     {
-        if (!$user = config('user')) {
+        $class = config('auth.model') ?? config('user');
+
+        if (!$class || !$this->session->has(SessionKeys::AuthToken->value)) {
             return;
         }
 
-        $user = new $user();
+        $user = new $class();
 
-        if (
-            !$user instanceof Model
-            || !$user instanceof Authenticatable
-            || !$this->session->has(SessionKeys::AuthToken->value)
-        ) {
+        if (!$user instanceof Model || !$user instanceof Authenticatable) {
             return;
         }
 
         $this->user = $user->authorizeWithToken($this->session->get(SessionKeys::AuthToken->value));
     }
 
-    private function renderError(Throwable $exception): string
+    private function renderError(Throwable $exception): Response
     {
         if (!$exception instanceof HttpException) {
             $exception = new ServerErrorException(previous: $exception);
         }
 
-        http_response_code($exception->getStatusCode());
-
-        $file = null;
-
-        if (file_exists(basePath("/views/_errors/{$exception->getStatusCode()}.php"))) {
-            $file = "_errors/{$exception->getStatusCode()}";
+        if ($this->request->wantsJson()) {
+            return Response::json(['message' => $exception->getMessage()], $exception->getStatusCode());
         }
 
-        if (is_null($file) && file_exists(basePath('/views/_errors.php'))) {
-            $file = '_errors';
+        return new Response($this->renderErrorView($exception), $exception->getStatusCode());
+    }
+
+    private function renderErrorView(HttpException $exception): string
+    {
+        $status = $exception->getStatusCode();
+
+        foreach (["_errors/$status", '_errors'] as $view) {
+            if (file_exists(basePath("/views/$view.php"))) {
+                return (new View())->render($view, compact('exception'));
+            }
         }
 
-        if (!isset($this->view) || is_null($file)) {
-            ob_start();
+        ob_start();
 
-            include __DIR__ . '/Views/templates/_errors.php';
+        include __DIR__ . '/Views/templates/_errors.php';
 
-            return ob_get_clean();
-        }
-
-        return $this->view->layout(null)->render($file, compact('exception'));
+        return ob_get_clean();
     }
 }
