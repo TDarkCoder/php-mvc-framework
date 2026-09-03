@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use TDarkCoder\Framework\Application;
 use TDarkCoder\Framework\Exceptions\ForbiddenException;
 use TDarkCoder\Framework\Exceptions\HttpException;
@@ -112,7 +114,7 @@ if (!function_exists('env')) {
     {
         $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
 
-        if ($value === false || $value === null) {
+        if ($value === false) {
             return $default;
         }
 

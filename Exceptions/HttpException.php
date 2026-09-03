@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Exceptions;
 
 use Exception;
@@ -7,6 +9,7 @@ use Throwable;
 
 class HttpException extends Exception
 {
+    /** @var int */
     protected $code = 500;
 
     public function __construct(string $message = '', int $code = 0, ?Throwable $previous = null)

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Services\AccessToken;
 
 use TDarkCoder\Framework\Database\Model;

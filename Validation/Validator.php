@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Validation;
 
 use Closure;
@@ -35,7 +37,7 @@ class Validator
     private array $errors = [];
     private bool $ran = false;
 
-    public function __construct(
+    final public function __construct(
         private readonly array $data,
         private readonly array $rules,
         private readonly array $messages = [],
@@ -176,7 +178,7 @@ class Validator
         $message = $this->messages["$attribute.$rule"]
             ?? $this->messages[$rule]
             ?? $message
-            ?? self::$extensions[$rule]['message']
+            ?? $this->extensionMessage($rule)
             ?? self::MESSAGES[$rule]
             ?? 'The :attribute is invalid';
 
@@ -185,6 +187,23 @@ class Validator
             [str_replace('_', ' ', $attribute), (string) ($parameters[0] ?? ''), implode(', ', $parameters)],
             $message,
         );
+    }
+
+    private function extensionMessage(string $rule): ?string
+    {
+        $extension = self::$extensions[$rule] ?? null;
+
+        if ($extension === null) {
+            return null;
+        }
+
+        if ($extension['message'] !== null || $extension['rule'] instanceof Closure) {
+            return $extension['message'];
+        }
+
+        $instance = new ($extension['rule'])();
+
+        return $instance instanceof Rule ? $instance->message() : null;
     }
 
     private function isBlank(mixed $value): bool

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Http;
 
 use JsonException;
@@ -11,7 +13,7 @@ class Response
 {
     private array $headers = [];
 
-    public function __construct(private string $content = '', private int $status = 200, array $headers = [])
+    final public function __construct(private string $content = '', private int $status = 200, array $headers = [])
     {
         foreach ($headers as $name => $value) {
             $this->header($name, $value);

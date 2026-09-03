@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Exceptions;
 
 class ValidationException extends HttpException
 {
+    /** @var int */
     protected $code = 422;
     protected $message = 'The given data was invalid';
 

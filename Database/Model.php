@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Database;
 
 use ArrayAccess;
@@ -9,6 +11,9 @@ use PDOStatement;
 use TDarkCoder\Framework\Exceptions\NotFoundException;
 use TDarkCoder\Framework\Exceptions\ServerErrorException;
 
+/**
+ * @implements ArrayAccess<string, mixed>
+ */
 abstract class Model implements ArrayAccess, JsonSerializable
 {
     protected array $data = [];
@@ -17,6 +22,10 @@ abstract class Model implements ArrayAccess, JsonSerializable
 
     public bool $exists = false;
     public string $primaryKey = 'id';
+
+    final public function __construct()
+    {
+    }
 
     abstract public function table(): string;
 

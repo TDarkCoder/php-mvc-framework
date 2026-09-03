@@ -1,14 +1,8 @@
 {
     "name": "php-mvc/framework",
     "description": "The PHP MVC Framework",
-    "autoload": {
-        "files": [
-            "helpers.php"
-        ],
-        "psr-4": {
-            "TDarkCoder\\Framework\\": "."
-        }
-    },
+    "type": "library",
+    "license": "MIT",
     "authors": [
         {
             "name": "Azizbek Khalilov",
@@ -17,7 +11,33 @@
     ],
     "require": {
         "php": "^8.1",
+        "ext-json": "*",
+        "ext-mbstring": "*",
         "ext-pdo": "*",
         "vlucas/phpdotenv": "^5.5"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^10.5"
+    },
+    "autoload": {
+        "files": [
+            "helpers.php"
+        ],
+        "psr-4": {
+            "TDarkCoder\\Framework\\": "."
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "TDarkCoder\\Framework\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "analyse": "phpstan analyse",
+        "test": "phpunit"
+    },
+    "config": {
+        "sort-packages": true
     }
 }

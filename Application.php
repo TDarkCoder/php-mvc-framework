@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework;
 
 use TDarkCoder\Framework\Contracts\Authenticatable;

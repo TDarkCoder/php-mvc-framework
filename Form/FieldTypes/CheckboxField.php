@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Form\FieldTypes;
 
 use TDarkCoder\Framework\Enums\InputTypes;

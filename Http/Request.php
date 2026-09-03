@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Http;
 
 use TDarkCoder\Framework\Enums\SessionKeys;
