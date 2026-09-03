@@ -4,38 +4,33 @@ namespace TDarkCoder\Framework\Views;
 
 class View implements ViewContract
 {
-    private string $title = self::DEFAULT_TITLE;
-    private string $layout = '';
+    private ?string $layout = null;
 
-    public function render(string $view, array $params): string
+    public function layout(?string $layout): static
     {
-        $view = $this->renderView($view, $params);
+        $this->layout = $layout;
 
-        if (!empty($this->layout)) {
-            $layout = $this->renderLayout();
+        return $this;
+    }
 
-            return str_replace('{{content}}', $view, $layout);
+    public function render(string $view, array $params = []): string
+    {
+        $content = $this->renderFile(basePath("/views/$view.php"), $params);
+
+        if (is_null($this->layout)) {
+            return $content;
         }
 
-        return $view;
+        return $this->renderFile(basePath("/views/layouts/$this->layout.php"), ['content' => $content] + $params);
     }
 
-    private function renderLayout(): bool|string
+    private function renderFile(string $__file, array $__params): string
     {
         ob_start();
 
-        include_once basePath("/views/layouts/$this->layout.php");
+        extract($__params, EXTR_SKIP);
 
-        return ob_get_clean();
-    }
-
-    private function renderView(string $view, array $params): bool|string
-    {
-        ob_start();
-
-        extract($params);
-
-        include_once basePath("/views/$view.php");
+        include $__file;
 
         return ob_get_clean();
     }
