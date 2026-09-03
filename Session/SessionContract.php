@@ -16,6 +16,14 @@ interface SessionContract
 
     public function has(string $key): bool;
 
+    public function invalidate(): void;
+
+    public function regenerate(): void;
+
+    public function regenerateToken(): void;
+
+    public function token(): string;
+
     public function setFlash(string $key, mixed $value): void;
 
     public function getFlash(string $key): mixed;

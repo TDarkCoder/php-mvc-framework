@@ -3,7 +3,6 @@
 namespace TDarkCoder\Framework\Form;
 
 use TDarkCoder\Framework\Enums\InputTypes;
-use TDarkCoder\Framework\Enums\SessionKeys;
 
 abstract class Field
 {
@@ -72,7 +71,7 @@ abstract class Field
     public function token(): static
     {
         $this->hidden();
-        $this->default(session()->get(SessionKeys::CsrfToken->value));
+        $this->default(session()->token());
 
         return $this;
     }

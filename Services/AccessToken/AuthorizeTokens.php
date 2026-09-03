@@ -18,6 +18,7 @@ trait AuthorizeTokens
             'device' => $_SERVER['HTTP_USER_AGENT'],
         ]);
 
+        session()->regenerate();
         session()->set(SessionKeys::AuthToken->value, $token->token);
     }
 
@@ -33,6 +34,6 @@ trait AuthorizeTokens
         $token = AccessToken::findOne(['token' => session()->get(SessionKeys::AuthToken->value)]);
         $token?->delete();
 
-        session()->remove(SessionKeys::AuthToken->value);
+        session()->invalidate();
     }
 }

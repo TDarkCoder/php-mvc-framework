@@ -14,13 +14,13 @@ class Session implements SessionContract
      */
     public function __construct()
     {
-        session_start();
+        $this->start();
 
         $this->flash = SessionKeys::Flash->value;
         $this->initializeFlashMessages();
 
         if (!isset($_SESSION[SessionKeys::CsrfToken->value])) {
-            $_SESSION[SessionKeys::CsrfToken->value] = bin2hex(random_bytes(32));
+            $this->regenerateToken();
         }
     }
 
@@ -42,6 +42,29 @@ class Session implements SessionContract
     public function has(string $key): bool
     {
         return isset($_SESSION[$key]);
+    }
+
+    public function invalidate(): void
+    {
+        $_SESSION = [];
+
+        $this->regenerate();
+        $this->regenerateToken();
+    }
+
+    public function regenerate(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function regenerateToken(): void
+    {
+        $_SESSION[SessionKeys::CsrfToken->value] = bin2hex(random_bytes(32));
     }
 
     public function remove(string $key): void
@@ -72,6 +95,11 @@ class Session implements SessionContract
         unset($_SESSION[$this->flash][$key]);
     }
 
+    public function token(): string
+    {
+        return $_SESSION[SessionKeys::CsrfToken->value];
+    }
+
     private function initializeFlashMessages(): void
     {
         foreach ($_SESSION[$this->flash] ?? [] as $key => $session) {
@@ -82,6 +110,13 @@ class Session implements SessionContract
         }
     }
 
+    private function isSecure(): bool
+    {
+        return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'
+            || (int) ($_SERVER['SERVER_PORT'] ?? 0) === 443;
+    }
+
     private function removeFlashMessages(): void
     {
         foreach ($_SESSION[$this->flash] ?? [] as $key => $value) {
@@ -89,5 +124,26 @@ class Session implements SessionContract
                 unset($_SESSION[$this->flash][$key]);
             }
         }
+    }
+
+    private function start(): void
+    {
+        if (PHP_SAPI === 'cli') {
+            $_SESSION ??= [];
+
+            return;
+        }
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            return;
+        }
+
+        session_start(array_merge([
+            'cookie_httponly' => true,
+            'cookie_samesite' => 'Lax',
+            'cookie_secure' => $this->isSecure(),
+            'use_only_cookies' => true,
+            'use_strict_mode' => true,
+        ], config('session') ?? []));
     }
 }
