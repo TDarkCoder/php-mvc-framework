@@ -12,27 +12,43 @@ trait AuthorizeTokens
      */
     public function authorizeToken(): void
     {
-        $token = AccessToken::create([
+        $plainToken = bin2hex(random_bytes(32));
+        $lifetime = (int) config('auth.token_lifetime');
+
+        $attributes = [
             'user_id' => $this->{$this->primaryKey},
-            'token' => bin2hex(random_bytes(32)),
-            'device' => $_SERVER['HTTP_USER_AGENT'],
-        ]);
+            'token' => AccessToken::hash($plainToken),
+            'device' => substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255),
+        ];
+
+        if ($lifetime > 0) {
+            $attributes['expires_at'] = date('Y-m-d H:i:s', time() + $lifetime);
+        }
+
+        AccessToken::create($attributes);
 
         session()->regenerate();
-        session()->set(SessionKeys::AuthToken->value, $token->token);
+        session()->set(SessionKeys::AuthToken->value, $plainToken);
     }
 
     public function authorizeWithToken(string $token): ?static
     {
-        $token = AccessToken::findOne(['token' => $token]);
+        $accessToken = AccessToken::findOne(['token' => AccessToken::hash($token)]);
 
-        return static::findOne([$this->primaryKey => $token?->user_id]);
+        if (is_null($accessToken) || $accessToken->isExpired()) {
+            return null;
+        }
+
+        return static::findOne([$this->primaryKey => $accessToken->user_id]);
     }
 
     public function logout(): void
     {
-        $token = AccessToken::findOne(['token' => session()->get(SessionKeys::AuthToken->value)]);
-        $token?->delete();
+        $token = session()->get(SessionKeys::AuthToken->value);
+
+        if (is_string($token)) {
+            AccessToken::findOne(['token' => AccessToken::hash($token)])?->delete();
+        }
 
         session()->invalidate();
     }
