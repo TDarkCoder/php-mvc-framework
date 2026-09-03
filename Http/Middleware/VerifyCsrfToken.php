@@ -2,7 +2,6 @@
 
 namespace TDarkCoder\Framework\Http\Middleware;
 
-use TDarkCoder\Framework\Enums\SessionKeys;
 use TDarkCoder\Framework\Exceptions\PageExpiredException;
 use TDarkCoder\Framework\Http\Middleware;
 use TDarkCoder\Framework\Http\Request;
@@ -18,8 +17,8 @@ class VerifyCsrfToken implements Middleware
     {
         if (
             $this->isReading($request)
-            || $this->tokensMatch($request)
             || $this->isException($request)
+            || $this->tokensMatch($request)
         ) {
             return true;
         }
@@ -29,25 +28,26 @@ class VerifyCsrfToken implements Middleware
 
     private function isReading(Request $request): bool
     {
-        return in_array($request->method(), [
-            'head',
-            'get',
-            'options',
-            '',
-        ]);
+        return in_array($request->method(), ['head', 'get', 'options'], true);
     }
 
     private function tokensMatch(Request $request): bool
     {
-        if (!$request->has('_token')) {
-            return false;
-        }
+        $token = $request->input('_token') ?? $request->header('X-CSRF-TOKEN');
 
-        return $request->get('_token') === session()->get(SessionKeys::CsrfToken->value);
+        return is_string($token) && hash_equals(session()->token(), $token);
     }
 
     private function isException(Request $request): bool
     {
-        return in_array($request->path(), $this->except);
+        $path = $request->path();
+
+        foreach ($this->except as $pattern) {
+            if ($pattern === $path || fnmatch($pattern, $path)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
