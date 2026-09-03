@@ -2,9 +2,11 @@
 
 namespace TDarkCoder\Framework\Http\Middleware;
 
+use Closure;
 use TDarkCoder\Framework\Contracts\Middleware;
 use TDarkCoder\Framework\Exceptions\PageExpiredException;
 use TDarkCoder\Framework\Http\Request;
+use TDarkCoder\Framework\Http\Response;
 
 class VerifyCsrfToken implements Middleware
 {
@@ -13,14 +15,14 @@ class VerifyCsrfToken implements Middleware
     /**
      * @throws PageExpiredException
      */
-    public function handle(Request $request): bool
+    public function handle(Request $request, Closure $next): Response
     {
         if (
             $this->isReading($request)
             || $this->isException($request)
             || $this->tokensMatch($request)
         ) {
-            return true;
+            return $next($request);
         }
 
         throw new PageExpiredException();

@@ -2,9 +2,15 @@
 
 namespace TDarkCoder\Framework\Contracts;
 
+use Closure;
 use TDarkCoder\Framework\Http\Request;
+use TDarkCoder\Framework\Http\Response;
 
 interface Middleware
 {
-    public function handle(Request $request): bool;
+    /**
+     * Handle the request and either return a Response or pass it on by
+     * calling $next($request).
+     */
+    public function handle(Request $request, Closure $next): Response;
 }

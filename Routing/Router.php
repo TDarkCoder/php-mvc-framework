@@ -6,10 +6,11 @@ use Closure;
 use Exception;
 use ReflectionClass;
 use ReflectionParameter;
-use TDarkCoder\Framework\Contracts\Middleware;
 use TDarkCoder\Framework\Contracts\Router as RouterContract;
 use TDarkCoder\Framework\Exceptions\NotFoundException;
 use TDarkCoder\Framework\Http\Controller;
+use TDarkCoder\Framework\Http\Pipeline;
+use TDarkCoder\Framework\Http\Request;
 use TDarkCoder\Framework\Http\Response;
 
 class Router implements RouterContract
@@ -54,15 +55,18 @@ class Router implements RouterContract
      */
     public function resolve(): Response
     {
-        foreach ($this->routes[request()->method()] ?? [] as $route => $action) {
+        $request = request();
+
+        foreach ($this->routes[$request->method()] ?? [] as $route => $action) {
             [$callback, $middlewares] = $action;
 
             if ($this->matchUri($route)) {
-                $globalMiddlewares = config('middlewares') ?? [];
+                $middlewares = array_merge(config('middlewares') ?? [], $middlewares);
 
-                $this->applyMiddlewares(array_merge($globalMiddlewares, $middlewares));
-
-                return Response::from($this->handleCallback($callback, $route));
+                return (new Pipeline($middlewares))->then(
+                    $request,
+                    fn(Request $request): mixed => $this->handleCallback($callback, $route),
+                );
             }
         }
 
@@ -79,26 +83,17 @@ class Router implements RouterContract
         ];
     }
 
-    private function applyControllerMiddlewares(Controller $controller, string $method): void
+    private function controllerMiddlewares(Controller $controller, string $method): array
     {
+        $middlewares = [];
+
         foreach ($controller->getMiddlewares() as $middleware => $methods) {
-            $middleware = new $middleware();
-
-            if ($middleware instanceof Middleware && $this->isMiddlewareApplicable($methods, $method)) {
-                $middleware->handle(request());
+            if ($this->isMiddlewareApplicable($methods, $method)) {
+                $middlewares[] = $middleware;
             }
         }
-    }
 
-    private function applyMiddlewares(array $middlewares): void
-    {
-        foreach ($middlewares as $middleware) {
-            $middleware = new $middleware();
-
-            if ($middleware instanceof Middleware) {
-                $middleware->handle(request());
-            }
-        }
+        return $middlewares;
     }
 
     /**
@@ -147,10 +142,12 @@ class Router implements RouterContract
 
             $controller = new $controller();
 
-            $this->applyControllerMiddlewares($controller, $method);
             $this->attachRequestIfRequired($controller, $method, $params);
 
-            $callback = [$controller, $method];
+            return (new Pipeline($this->controllerMiddlewares($controller, $method)))->then(
+                request(),
+                fn(): mixed => call_user_func_array([$controller, $method], $params),
+            );
         }
 
         return call_user_func_array($callback, $params);
