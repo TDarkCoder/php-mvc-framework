@@ -13,7 +13,7 @@ class TextareaField extends Field
                           id="%s"
                           name="%s">%s</textarea>
         ',
-            request()->getError('description') ? 'is-invalid' : '',
+            request()->getError($this->attribute) ? 'is-invalid' : '',
             $this->attribute,
             $this->attribute,
             request()->old($this->attribute) ?? $this->defaultValue,
