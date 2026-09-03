@@ -3,7 +3,6 @@
 namespace TDarkCoder\Framework\Services\AccessToken;
 
 use Exception;
-use TDarkCoder\Framework\Database\Model;
 use TDarkCoder\Framework\Enums\SessionKeys;
 
 trait AuthorizeTokens
@@ -22,7 +21,7 @@ trait AuthorizeTokens
         session()->set(SessionKeys::AuthToken->value, $token->token);
     }
 
-    public function authorizeWithToken(string $token): ?Model
+    public function authorizeWithToken(string $token): ?static
     {
         $token = AccessToken::findOne(['token' => $token]);
 

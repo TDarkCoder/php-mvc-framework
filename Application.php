@@ -2,6 +2,7 @@
 
 namespace TDarkCoder\Framework;
 
+use TDarkCoder\Framework\Contracts\Authenticatable;
 use TDarkCoder\Framework\Database\Database;
 use TDarkCoder\Framework\Database\Model;
 use TDarkCoder\Framework\Enums\SessionKeys;
@@ -10,7 +11,6 @@ use TDarkCoder\Framework\Exceptions\ServerErrorException;
 use TDarkCoder\Framework\Http\Request;
 use TDarkCoder\Framework\Routing\Router;
 use TDarkCoder\Framework\Routing\RouterContract;
-use TDarkCoder\Framework\Services\AccessToken\AuthorizeTokens;
 use TDarkCoder\Framework\Session\Session;
 use TDarkCoder\Framework\Views\View;
 use TDarkCoder\Framework\Views\ViewContract;
@@ -70,7 +70,7 @@ class Application
 
         if (
             !$user instanceof Model
-            || !class_uses($user, AuthorizeTokens::class)
+            || !$user instanceof Authenticatable
             || !$this->session->has(SessionKeys::AuthToken->value)
         ) {
             return;
