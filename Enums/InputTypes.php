@@ -4,9 +4,12 @@ namespace TDarkCoder\Framework\Enums;
 
 enum InputTypes: string
 {
+    case Checkbox = 'checkbox';
+    case Date = 'date';
     case Email = 'email';
+    case File = 'file';
+    case Hidden = 'hidden';
+    case Number = 'number';
     case Password = 'password';
     case Text = 'text';
-    case Number = 'number';
-    case Hidden = 'hidden';
 }

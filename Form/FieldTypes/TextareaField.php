@@ -8,15 +8,15 @@ class TextareaField extends Field
 {
     protected function renderField(): string
     {
-        return sprintf('
-                <textarea class="form-control %s"
-                          id="%s"
-                          name="%s">%s</textarea>
-        ',
-            request()->getError($this->attribute) ? 'is-invalid' : '',
+        $value = $this->value();
+
+        return sprintf(
+            '<textarea class="form-control%s" id="%s" name="%s"%s>%s</textarea>',
+            $this->error() ? ' is-invalid' : '',
+            e($this->id()),
             e($this->attribute),
-            e($this->attribute),
-            e(request()->old($this->attribute) ?? $this->defaultValue),
+            $this->attributesString(),
+            e(is_scalar($value) ? $value : ''),
         );
     }
 }
