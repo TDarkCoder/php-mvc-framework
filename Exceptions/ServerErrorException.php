@@ -1,11 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Exceptions;
 
-use Exception;
-
-class ServerErrorException extends Exception
+class ServerErrorException extends HttpException
 {
+    /** @var int */
     protected $code = 500;
     protected $message = 'Server error';
 }

@@ -1,0 +1,25 @@
+parameters:
+    level: 6
+    paths:
+        - Application.php
+        - helpers.php
+        - Contracts
+        - Database
+        - Enums
+        - Exceptions
+        - Form
+        - Http
+        - Routing
+        - Services
+        - Session
+        - Validation
+        - Views
+        - tests
+    excludePaths:
+        - Views/templates
+    treatPhpDocTypesAsCertain: false
+    universalObjectCratesClasses:
+        - TDarkCoder\Framework\Database\Model
+        - TDarkCoder\Framework\Http\Request
+    ignoreErrors:
+        - identifier: missingType.iterableValue

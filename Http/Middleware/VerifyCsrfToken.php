@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Http\Middleware;
 
-use TDarkCoder\Framework\Enums\SessionKeys;
+use Closure;
+use TDarkCoder\Framework\Contracts\Middleware;
 use TDarkCoder\Framework\Exceptions\PageExpiredException;
-use TDarkCoder\Framework\Http\Middleware;
 use TDarkCoder\Framework\Http\Request;
+use TDarkCoder\Framework\Http\Response;
 
 class VerifyCsrfToken implements Middleware
 {
@@ -14,14 +17,14 @@ class VerifyCsrfToken implements Middleware
     /**
      * @throws PageExpiredException
      */
-    public function handle(Request $request): bool
+    public function handle(Request $request, Closure $next): Response
     {
         if (
             $this->isReading($request)
-            || $this->tokensMatch($request)
             || $this->isException($request)
+            || $this->tokensMatch($request)
         ) {
-            return true;
+            return $next($request);
         }
 
         throw new PageExpiredException();
@@ -29,25 +32,26 @@ class VerifyCsrfToken implements Middleware
 
     private function isReading(Request $request): bool
     {
-        return in_array($request->method(), [
-            'head',
-            'get',
-            'options',
-            '',
-        ]);
+        return in_array($request->method(), ['head', 'get', 'options'], true);
     }
 
     private function tokensMatch(Request $request): bool
     {
-        if (!$request->has('_token')) {
-            return false;
-        }
+        $token = $request->input('_token') ?? $request->header('X-CSRF-TOKEN');
 
-        return $request->get('_token') === session()->get(SessionKeys::Token->value);
+        return is_string($token) && hash_equals(session()->token(), $token);
     }
 
     private function isException(Request $request): bool
     {
-        return in_array($request->path(), $this->except);
+        $path = $request->path();
+
+        foreach ($this->except as $pattern) {
+            if ($pattern === $path || fnmatch($pattern, $path)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

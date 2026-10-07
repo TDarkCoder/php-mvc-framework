@@ -1,6 +1,8 @@
 <?php
 
-namespace TDarkCoder\Framework\Database;
+declare(strict_types=1);
+
+namespace TDarkCoder\Framework\Contracts;
 
 interface Migration
 {

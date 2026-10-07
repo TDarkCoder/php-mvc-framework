@@ -1,29 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Http;
 
-use TDarkCoder\Framework\Database\Model;
-use TDarkCoder\Framework\Enums\Rules;
 use TDarkCoder\Framework\Enums\SessionKeys;
+use TDarkCoder\Framework\Exceptions\ValidationException;
+use TDarkCoder\Framework\Validation\Validator;
 
 class Request
 {
-    private array $data = [];
-    private array $errors = [];
+    private array $body;
+    private array $data;
+    private array $query;
 
     public function __construct()
     {
-        if ($this->isGet()) {
-            foreach ($_GET as $key => $value) {
-                $this->data[$key] = filter_input(INPUT_GET, $key, FILTER_SANITIZE_SPECIAL_CHARS);
-            }
-        }
-
-        if ($this->isPost()) {
-            foreach ($_POST as $key => $value) {
-                $this->data[$key] = filter_input(INPUT_POST, $key, FILTER_SANITIZE_SPECIAL_CHARS);
-            }
-        }
+        $this->query = $_GET;
+        $this->body = $this->parseBody();
+        $this->data = array_merge($this->query, $this->body);
     }
 
     public function __get(string $name): mixed
@@ -41,14 +36,43 @@ class Request
         return $this->data;
     }
 
-    public function get(string $key): mixed
+    public function except(array $keys): array
     {
-        return $this->data[$key] ?? null;
+        return array_diff_key($this->data, array_flip($keys));
     }
 
-    public function getError(string $attribute): string|bool
+    public function get(string $key, mixed $default = null): mixed
     {
-        return session()->getFlash(SessionKeys::OldInput->value)['errors'][$attribute][0] ?? false;
+        return $this->data[$key] ?? $default;
+    }
+
+    /**
+     * Validation errors flashed by the previous request.
+     *
+     * @return array<string, string[]>
+     */
+    public function errors(): array
+    {
+        return session()->getFlash(SessionKeys::Errors->value, []);
+    }
+
+    /**
+     * Flash the current input for the next request, leaving out secrets.
+     */
+    public function flash(): void
+    {
+        $inputs = array_filter(
+            $this->data,
+            fn(string|int $key): bool => !str_contains((string) $key, 'password') && $key !== '_token',
+            ARRAY_FILTER_USE_KEY,
+        );
+
+        session()->setFlash(SessionKeys::OldInput->value, $inputs);
+    }
+
+    public function getError(string $attribute): ?string
+    {
+        return $this->errors()[$attribute][0] ?? null;
     }
 
     public function has(string $key): bool
@@ -56,9 +80,26 @@ class Request
         return isset($this->data[$key]);
     }
 
+    public function header(string $name, ?string $default = null): ?string
+    {
+        $key = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
+
+        return $_SERVER[$key] ?? $default;
+    }
+
+    public function input(string $key, mixed $default = null): mixed
+    {
+        return $this->data[$key] ?? $default;
+    }
+
     public function isGet(): bool
     {
         return $this->method() === 'get';
+    }
+
+    public function isJson(): bool
+    {
+        return str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'json');
     }
 
     public function isPost(): bool
@@ -68,12 +109,20 @@ class Request
 
     public function method(): string
     {
-        return strtolower($this->data['_method'] ?? $_SERVER['REQUEST_METHOD'] ?? '');
+        $method = strtolower($_SERVER['REQUEST_METHOD'] ?? 'get');
+
+        if ($method !== 'post') {
+            return $method;
+        }
+
+        $override = strtolower((string) ($this->body['_method'] ?? ''));
+
+        return in_array($override, ['put', 'patch', 'delete'], true) ? $override : $method;
     }
 
-    public function old(string $attribute)
+    public function old(string $attribute, mixed $default = null): mixed
     {
-        return session()->getFlash(SessionKeys::OldInput->value)['inputs'][$attribute] ?? null;
+        return session()->getFlash(SessionKeys::OldInput->value, [])[$attribute] ?? $default;
     }
 
     public function only(array $keys): array
@@ -89,95 +138,53 @@ class Request
 
     public function path(): string
     {
-        $path = $_SERVER['REQUEST_URI'];
-        $queryPosition = strpos($path, '?');
+        $path = explode('?', $_SERVER['REQUEST_URI'] ?? '/', 2)[0];
 
-        if (!$queryPosition) {
-            return $path;
-        }
-
-        return substr($path, 0, $queryPosition);
+        return rawurldecode($path) ?: '/';
     }
 
     public function previousUrl(): string
     {
-        if (isset($_SERVER['HTTP_REFERER'])) {
-            return $_SERVER['HTTP_REFERER'];
-        }
-
-        return $this->path();
+        return $_SERVER['HTTP_REFERER'] ?? $this->path();
     }
 
-    public function validate(array $data): bool
+    public function wantsJson(): bool
     {
-        foreach ($data as $attribute => $rules) {
-            $value = $this->data[$attribute] ?? '';
-
-            $rules = explode('|', $rules);
-
-            foreach ($rules as $rule) {
-                $newRules = explode(':', $rule);
-
-                if (count($newRules) > 1) {
-                    [$rule, $indicator] = $newRules;
-
-                    if ($rule === Rules::Min->value && strlen($value) < $indicator) {
-                        $this->addError($attribute, Rules::Min, $indicator);
-                    }
-
-                    if ($rule === Rules::Max->value && strlen($value) > $indicator) {
-                        $this->addError($attribute, Rules::Min, $indicator);
-                    }
-
-                    if ($rule === Rules::LessOrEqual->value && $value > $indicator) {
-                        $this->addError($attribute, Rules::LessOrEqual, $indicator);
-                    }
-
-                    if ($rule === Rules::GreaterOrEqual->value && $value < $indicator) {
-                        $this->addError($attribute, Rules::GreaterOrEqual, $indicator);
-                    }
-
-                    if ($rule === Rules::Match->value && $value !== $this->{$indicator}) {
-                        $this->addError($attribute, Rules::Match, $indicator);
-                    }
-
-                    if ($rule === Rules::Unique->value) {
-                        $object = new $indicator();
-
-                        if ($object instanceof Model && $object->findOne([$attribute => $value])) {
-                            $this->addError($attribute, Rules::Unique, $attribute);
-                        }
-                    }
-                } else {
-                    if ($rule === Rules::Email->value && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                        $this->addError($attribute, Rules::Email);
-                    }
-
-                    if ($rule === Rules::Required->value && !$value) {
-                        $this->addError($attribute, Rules::Required);
-                    }
-
-                    if ($rule === Rules::Number->value && !is_numeric($value)) {
-                        $this->addError($attribute, Rules::Number);
-                    }
-                }
-            }
-        }
-
-        session()->setFlash(SessionKeys::OldInput->value, [
-            'inputs' => $this->data,
-            'errors' => $this->errors,
-        ]);
-
-        if (!empty($this->errors)) {
-            redirect($this->previousUrl());
-        }
-
-        return true;
+        return str_contains($this->header('Accept', ''), 'json');
     }
 
-    private function addError(string $attribute, Rules $rule, string $indicator = ''): void
+    /**
+     * Validate the input and return the validated attributes. Failures throw
+     * a ValidationException which the application turns into a redirect
+     * back with the errors and old input, or a 422 JSON response.
+     *
+     * @throws ValidationException
+     */
+    public function validate(array $rules, array $messages = []): array
     {
-        $this->errors[$attribute][] = str_replace("{{$rule->value}}", $indicator, $rule->message()) ?? 'Unknown error';
+        return Validator::make($this->data, $rules, $messages)->validate();
+    }
+
+    private function parseBody(): array
+    {
+        $method = strtolower($_SERVER['REQUEST_METHOD'] ?? 'get');
+
+        if (in_array($method, ['get', 'head', 'options'], true)) {
+            return [];
+        }
+
+        if ($this->isJson()) {
+            $decoded = json_decode((string) file_get_contents('php://input'), true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        if ($method === 'post') {
+            return $_POST;
+        }
+
+        parse_str((string) file_get_contents('php://input'), $body);
+
+        return $body;
     }
 }

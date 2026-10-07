@@ -1,42 +1,80 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Views;
+
+use TDarkCoder\Framework\Contracts\View as ViewContract;
+use TDarkCoder\Framework\Exceptions\ViewNotFoundException;
+use Throwable;
 
 class View implements ViewContract
 {
-    private string $title = self::DEFAULT_TITLE;
-    private string $layout = '';
+    private ?string $layout = null;
 
-    public function render(string $view, array $params): string
+    public function exists(string $view): bool
     {
-        $view = $this->renderView($view, $params);
+        return is_file($this->path($view));
+    }
 
-        if (!empty($this->layout)) {
-            $layout = $this->renderLayout();
+    public function layout(?string $layout): static
+    {
+        $this->layout = $layout;
 
-            return str_replace('{{content}}', $view, $layout);
+        return $this;
+    }
+
+    /**
+     * @throws ViewNotFoundException
+     */
+    public function render(string $view, array $params = []): string
+    {
+        $content = $this->renderFile($view, $params);
+
+        if (is_null($this->layout)) {
+            return $content;
         }
 
-        return $view;
+        return $this->renderFile("layouts/$this->layout", ['content' => $content] + $params);
     }
 
-    private function renderLayout(): bool|string
+    private function path(string $view): string
     {
-        ob_start();
+        $directory = rtrim(config('views.path') ?? basePath('/views'), '/');
 
-        include_once basePath("/views/layouts/$this->layout.php");
-
-        return ob_get_clean();
+        return $directory . '/' . str_replace('.', '/', $view) . '.php';
     }
 
-    private function renderView(string $view, array $params): bool|string
+    /**
+     * Templates run inside a static closure so they cannot reach into the
+     * View instance through $this.
+     *
+     * @throws ViewNotFoundException
+     */
+    private function renderFile(string $view, array $params): string
     {
-        ob_start();
+        $file = $this->path($view);
 
-        extract($params);
+        if (!is_file($file)) {
+            throw new ViewNotFoundException("View [$view] not found");
+        }
 
-        include_once basePath("/views/$view.php");
+        $render = static function (string $__file, array $__params): string {
+            ob_start();
 
-        return ob_get_clean();
+            extract($__params, EXTR_SKIP);
+
+            try {
+                include $__file;
+            } catch (Throwable $exception) {
+                ob_end_clean();
+
+                throw $exception;
+            }
+
+            return ob_get_clean();
+        };
+
+        return $render($file, $params);
     }
 }

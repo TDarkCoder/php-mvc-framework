@@ -1,42 +1,43 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Session;
 
 use Exception;
+use TDarkCoder\Framework\Contracts\Session as SessionContract;
 use TDarkCoder\Framework\Enums\SessionKeys;
 
 class Session implements SessionContract
 {
-    private string $flash;
-
     /**
      * @throws Exception
      */
     public function __construct()
     {
-        session_start();
+        $this->start();
+        $this->ageFlashData();
 
-        $this->flash = SessionKeys::Flash->value;
-        $this->initializeFlashMessages();
-
-        if (!isset($_SESSION[SessionKeys::Token->value])) {
-            $_SESSION[SessionKeys::Token->value] = bin2hex(random_bytes(32));
+        if (!isset($_SESSION[SessionKeys::CsrfToken->value])) {
+            $this->regenerateToken();
         }
     }
 
-    public function __destruct()
+    public function all(): array
     {
-        $this->removeFlashMessages();
+        return $_SESSION;
     }
 
-    public function set(string $key, mixed $value): void
+    public function get(string $key, mixed $default = null): mixed
     {
-        $_SESSION[$key] = $value;
+        return $_SESSION[$key] ?? $default;
     }
 
-    public function get(string $key): mixed
+    public function getFlash(string $key, mixed $default = null): mixed
     {
-        return $_SESSION[$key] ?? null;
+        $flash = $_SESSION[SessionKeys::Flash->value] ?? [];
+
+        return $flash['old'][$key] ?? $flash['new'][$key] ?? $default;
     }
 
     public function has(string $key): bool
@@ -44,50 +45,100 @@ class Session implements SessionContract
         return isset($_SESSION[$key]);
     }
 
+    public function hasFlash(string $key): bool
+    {
+        $flash = $_SESSION[SessionKeys::Flash->value] ?? [];
+
+        return isset($flash['old'][$key]) || isset($flash['new'][$key]);
+    }
+
+    public function invalidate(): void
+    {
+        $_SESSION = [];
+
+        $this->regenerate();
+        $this->regenerateToken();
+    }
+
+    public function regenerate(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function regenerateToken(): void
+    {
+        $_SESSION[SessionKeys::CsrfToken->value] = bin2hex(random_bytes(32));
+    }
+
     public function remove(string $key): void
     {
         unset($_SESSION[$key]);
     }
 
+    public function removeFlash(string $key): void
+    {
+        unset($_SESSION[SessionKeys::Flash->value]['old'][$key], $_SESSION[SessionKeys::Flash->value]['new'][$key]);
+    }
+
+    public function set(string $key, mixed $value): void
+    {
+        $_SESSION[$key] = $value;
+    }
+
     public function setFlash(string $key, mixed $value): void
     {
-        $_SESSION[$this->flash][$key] = [
-            'remove' => false,
-            'value' => $value,
+        $_SESSION[SessionKeys::Flash->value]['new'][$key] = $value;
+    }
+
+    public function token(): string
+    {
+        return $_SESSION[SessionKeys::CsrfToken->value];
+    }
+
+    /**
+     * Flash data written during the previous request becomes readable now
+     * and is dropped at the start of the next request.
+     */
+    private function ageFlashData(): void
+    {
+        $flash = $_SESSION[SessionKeys::Flash->value] ?? [];
+
+        $_SESSION[SessionKeys::Flash->value] = [
+            'old' => $flash['new'] ?? [],
+            'new' => [],
         ];
     }
 
-    public function getFlash(string $key): mixed
+    private function isSecure(): bool
     {
-        return $_SESSION[$this->flash][$key]['value'] ?? null;
+        return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'
+            || (int) ($_SERVER['SERVER_PORT'] ?? 0) === 443;
     }
 
-    public function hasFlash(string $key): bool
+    private function start(): void
     {
-        return isset($_SESSION[$this->flash][$key]);
-    }
+        if (PHP_SAPI === 'cli') {
+            $_SESSION ??= [];
 
-    public function removeFlash(string $key): void
-    {
-        unset($_SESSION[$this->flash][$key]);
-    }
-
-    private function initializeFlashMessages(): void
-    {
-        foreach ($_SESSION[$this->flash] ?? [] as $key => $session) {
-            $_SESSION[$this->flash][$key] = [
-                'remove' => true,
-                'value' => $session['value'],
-            ];
+            return;
         }
-    }
 
-    private function removeFlashMessages(): void
-    {
-        foreach ($_SESSION[$this->flash] ?? [] as $key => $value) {
-            if ($value['remove'] === true) {
-                unset($_SESSION[$this->flash][$key]);
-            }
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            return;
         }
+
+        session_start(array_merge([
+            'cookie_httponly' => true,
+            'cookie_samesite' => 'Lax',
+            'cookie_secure' => $this->isSecure(),
+            'use_only_cookies' => true,
+            'use_strict_mode' => true,
+        ], config('session') ?? []));
     }
 }

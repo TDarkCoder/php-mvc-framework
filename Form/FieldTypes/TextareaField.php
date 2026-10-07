@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Form\FieldTypes;
 
 use TDarkCoder\Framework\Form\Field;
@@ -8,15 +10,15 @@ class TextareaField extends Field
 {
     protected function renderField(): string
     {
-        return sprintf('
-                <textarea class="form-control %s"
-                          id="%s"
-                          name="%s">%s</textarea>
-        ',
-            request()->getError('description') ? 'is-invalid' : '',
-            $this->attribute,
-            $this->attribute,
-            request()->old($this->attribute) ?? $this->defaultValue,
+        $value = $this->value();
+
+        return sprintf(
+            '<textarea class="form-control%s" id="%s" name="%s"%s>%s</textarea>',
+            $this->error() ? ' is-invalid' : '',
+            e($this->id()),
+            e($this->attribute),
+            $this->attributesString(),
+            e(is_scalar($value) ? $value : ''),
         );
     }
 }

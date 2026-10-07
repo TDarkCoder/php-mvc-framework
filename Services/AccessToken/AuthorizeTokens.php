@@ -1,9 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Services\AccessToken;
 
 use Exception;
-use TDarkCoder\Framework\Database\Model;
 use TDarkCoder\Framework\Enums\SessionKeys;
 
 trait AuthorizeTokens
@@ -13,27 +14,44 @@ trait AuthorizeTokens
      */
     public function authorizeToken(): void
     {
-        $token = AccessToken::create([
-            'user_id' => $this->{$this->primaryKey},
-            'token' => bin2hex(random_bytes(32)),
-            'device' => $_SERVER['HTTP_USER_AGENT'],
-        ]);
+        $plainToken = bin2hex(random_bytes(32));
+        $lifetime = (int) config('auth.token_lifetime');
 
-        session()->set(SessionKeys::Token->value, $token->token);
+        $attributes = [
+            'user_id' => $this->{$this->primaryKey},
+            'token' => AccessToken::hash($plainToken),
+            'device' => substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255),
+        ];
+
+        if ($lifetime > 0) {
+            $attributes['expires_at'] = date('Y-m-d H:i:s', time() + $lifetime);
+        }
+
+        AccessToken::create($attributes);
+
+        session()->regenerate();
+        session()->set(SessionKeys::AuthToken->value, $plainToken);
     }
 
-    public function authorizeWithToken(string $token): ?Model
+    public function authorizeWithToken(string $token): ?static
     {
-        $token = AccessToken::findOne(['token' => $token]);
+        $accessToken = AccessToken::findOne(['token' => AccessToken::hash($token)]);
 
-        return static::findOne([$this->primaryKey => $token?->user_id]);
+        if (is_null($accessToken) || $accessToken->isExpired()) {
+            return null;
+        }
+
+        return static::findOne([$this->primaryKey => $accessToken->user_id]);
     }
 
     public function logout(): void
     {
-        $token = AccessToken::findOne(['token' => session()->get(SessionKeys::Token->value)]);
-        $token?->delete();
+        $token = session()->get(SessionKeys::AuthToken->value);
 
-        session()->remove(SessionKeys::Token->value);
+        if (is_string($token)) {
+            AccessToken::findOne(['token' => AccessToken::hash($token)])?->delete();
+        }
+
+        session()->invalidate();
     }
 }

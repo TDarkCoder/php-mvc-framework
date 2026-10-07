@@ -1,11 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TDarkCoder\Framework\Exceptions;
 
-use Exception;
-
-class PageExpiredException extends Exception
+class PageExpiredException extends HttpException
 {
+    /** @var int */
     protected $code = 419;
     protected $message = 'Page expired';
 }
